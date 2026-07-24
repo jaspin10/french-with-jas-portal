@@ -573,3 +573,27 @@ body {
     min-width: 560px;
   }
 }
+
+.verb-sheet-v2 { padding: 16px; }
+.vs2-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; }
+.vs2-score-summary { font-size: 13px; color: #888; }
+.vs2-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.vs2-pill { border: 1px solid #ddd; background: #fff; border-radius: 999px; padding: 5px 12px; font-size: 13px; cursor: pointer; }
+.vs2-pill.active { border-color: #6C5CE7; background: #6C5CE7; color: #fff; }
+.vs2-pill.done { border-color: #2ecc71; }
+.vs2-pill.done.active { background: #2ecc71; border-color: #2ecc71; }
+.vs2-pill.locked { opacity: 0.5; }
+.vs2-grid { display: flex; flex-direction: column; gap: 8px; }
+.vs2-row { display: flex; align-items: center; gap: 8px; }
+.vs2-pronoun { width: 110px; font-size: 14px; color: #555; flex-shrink: 0; }
+.vs2-input { width: 180px; padding: 6px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+.vs2-input.correct { border-color: #2ecc71; background: #f2fcf6; }
+.vs2-input.accents { border-color: #f39c12; background: #fef9ef; }
+.vs2-input.wrong { border-color: #e74c3c; background: #fdf3f2; }
+.vs2-correction { font-size: 13px; }
+.vs2-correction.correct { color: #2ecc71; }
+.vs2-correction.accents { color: #f39c12; }
+.vs2-correction.wrong { color: #e74c3c; }
+.vs2-locked-msg { padding: 16px; color: #888; font-size: 14px; }
+.vs2-submit { margin-top: 12px; }
+.vs2-final-score { margin-top: 12px; font-weight: 600; color: #555; }

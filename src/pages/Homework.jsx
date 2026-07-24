@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useStudyTimer } from '../hooks/useStudyTimer'
 import ThemeTable from '../components/ThemeTable'
-import VerbSheet from '../components/VerbSheet'
+import VerbSheetV2 from '../components/VerbSheetV2'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -45,6 +45,7 @@ export default function Homework(props) {
   const [loading, setLoading] = useState(true)
   const [weekendUnlocked, setWeekendUnlocked] = useState(false)
   const [allHomeworks, setAllHomeworks] = useState([])
+  const [cycleNumber, setCycleNumber] = useState(1)
   const timer = useStudyTimer(
     profile ? profile.id : null,
     homework ? homework.id : null
@@ -65,12 +66,13 @@ export default function Homework(props) {
     async function load() {
       const cycleRes = await supabase
         .from('global_cycle')
-        .select('current_homework_id')
+        .select('current_homework_id, cycle_number')
         .eq('id', 1)
         .maybeSingle()
 
       if (!cycleRes.data) { setLoading(false); return }
       const hwId = cycleRes.data.current_homework_id
+      setCycleNumber(cycleRes.data.cycle_number || 1)
 
       const hwRes = await supabase
         .from('homeworks')
@@ -167,7 +169,7 @@ export default function Homework(props) {
               }
               onClick={function () { if (!locked) setDay(d.key) }}
             >
-              {d.label}{locked ? ' 🔒' : ''}
+              {d.label}{locked ? ' [locked]' : ''}
             </button>
           )
         })}
@@ -194,10 +196,12 @@ export default function Homework(props) {
               {block.items.map(function (item) {
                 if (item.item_type === 'verb_sheet') {
                   return (
-                    <VerbSheet
+                    <VerbSheetV2
                       key={item.id}
-                      verb={item.prompt}
-                      data={item.extra}
+                      item={item}
+                      profile={profile}
+                      homeworkId={homework.id}
+                      cycleNumber={cycleNumber}
                     />
                   )
                 }

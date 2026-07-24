@@ -33,6 +33,22 @@ export default function Inbox() {
     if (res.data) window.open(res.data.signedUrl, '_blank')
   }
 
+  async function deleteSubmission(sub) {
+    const ok = window.confirm(
+      'Delete this submission from ' + (studentOf(sub).full_name || 'this student') +
+      '? This cannot be undone.'
+    )
+    if (!ok) return
+    await supabase.storage.from('submissions').remove([sub.storage_path])
+    const res = await supabase.from('submissions').delete().eq('id', sub.id)
+    if (res.error) {
+      alert('Could not delete: ' + res.error.message)
+      return
+    }
+    load()
+  }
+
+
   function startGrading(sub) {
     setEditingId(sub.id)
     setDraftGrade(sub.grade != null ? String(sub.grade) : '')
@@ -96,6 +112,7 @@ export default function Inbox() {
             >
               {f === 'all' ? 'All' : f === 'ungraded' ? 'Awaiting feedback' : 'Late only'}
             </button>
+            
           )
         })}
       </div>
@@ -138,6 +155,13 @@ export default function Inbox() {
                   </button>
                   <button className="reveal-btn" onClick={function () { startGrading(sub) }}>
                     {sub.grade != null || sub.feedback ? 'Edit feedback' : 'Grade'}
+                  </button>
+                  <button
+                    className="reveal-btn"
+                    style={{ background: 'var(--red-soft)', color: 'var(--red)' }}
+                    onClick={function () { deleteSubmission(sub) }}
+                  >
+                    Delete
                   </button>
                 </div>
               </div>

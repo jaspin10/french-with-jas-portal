@@ -108,6 +108,21 @@ export default function Submissions(props) {
     if (res.data) window.open(res.data.signedUrl, '_blank')
   }
 
+
+  async function deleteSubmission(sub) {
+    const ok = window.confirm(
+      'Delete this submission? This cannot be undone.'
+    )
+    if (!ok) return
+    await supabase.storage.from('submissions').remove([sub.storage_path])
+    const res = await supabase.from('submissions').delete().eq('id', sub.id)
+    if (res.error) {
+      alert('Could not delete: ' + res.error.message)
+      return
+    }
+    load()
+  }
+
   if (!profile || !cycle) return <div className="card">Loading...</div>
 
   return (
@@ -185,6 +200,15 @@ export default function Submissions(props) {
                 >
                   Open
                 </button>
+                {s.grade == null && !s.feedback && (
+                  <button
+                    className="reveal-btn"
+                    style={{ background: 'var(--red-soft)', color: 'var(--red)' }}
+                    onClick={function () { deleteSubmission(s) }}
+                  >
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           )

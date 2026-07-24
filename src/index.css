@@ -595,5 +595,30 @@ body {
 .vs2-correction.accents { color: #f39c12; }
 .vs2-correction.wrong { color: #e74c3c; }
 .vs2-locked-msg { padding: 16px; color: #888; font-size: 14px; }
-.vs2-submit { margin-top: 12px; }
 .vs2-final-score { margin-top: 12px; font-weight: 600; color: #555; }
+
+
+.vs2-submit {
+  margin-top: 14px;
+  padding: 10px 22px;
+  border: none;
+  border-radius: 8px;
+  background: #6C5CE7;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(108, 92, 231, 0.35);
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+.vs2-submit:hover:not(:disabled) {
+  background: #5a4bd1;
+  box-shadow: 0 4px 12px rgba(108, 92, 231, 0.45);
+  transform: translateY(-1px);
+}
+.vs2-submit:disabled {
+  background: #e4e1f5;
+  color: #9b94c9;
+  box-shadow: none;
+  cursor: not-allowed;
+}

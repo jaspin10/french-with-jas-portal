@@ -93,3 +93,30 @@ export default function AppShell({ profile, isTeacher }) {
     </div>
   );
 }
+
+<nav className="bottom-nav">
+        {nav.map(function (item) {
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
+              className={function (state) {
+                return state.isActive ? 'active' : ''
+              }}
+            >
+              <span className="bn-icon">
+                {item.label === 'Dashboard' ? '⌂'
+                  : item.label === 'Homework' ? '✎'
+                  : item.label === 'Submissions' ? '↥'
+                  : item.label === 'My Results' ? '▤'
+                  : item.label === 'Class' ? '▶'
+                  : item.label === 'Students' ? '⚇'
+                  : item.label === 'Homework Manager' ? '▦'
+                  : '☰'}
+              </span>
+              {item.label.split(' ')[0]}
+            </NavLink>
+          )
+        })}
+      </nav>

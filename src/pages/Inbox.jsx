@@ -190,3 +190,47 @@ export default function Inbox() {
     </div>
   )
 }
+
+/* ---------- Mobile polish ---------- */
+.bottom-nav { display: none; }
+
+@media (max-width: 900px) {
+  /* App-like bottom navigation */
+  .bottom-nav {
+    display: flex;
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--card); border-top: 1px solid #ECEDF3;
+    z-index: 50; padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .bottom-nav a {
+    flex: 1; text-align: center; text-decoration: none;
+    color: var(--text-muted); font-size: 11px; font-weight: 600;
+    padding: 6px 2px; border-radius: 8px;
+  }
+  .bottom-nav a.active { color: var(--primary); background: var(--primary-soft); }
+  .bottom-nav .bn-icon { display: block; font-size: 18px; margin-bottom: 2px; }
+
+  .content { padding: 16px 12px 84px; }  /* room for bottom nav */
+  .topbar { padding: 0 12px; }
+  .search { display: none; }             /* search hidden on phones for now */
+
+  .card { padding: 16px; }
+  .stat-value { font-size: 21px; }
+
+  /* Day tabs: horizontal scroll instead of wrapping */
+  .day-tabs {
+    flex-wrap: nowrap; overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+  .day-tab { flex: 0 0 auto; }
+
+  /* Timer bar stacks */
+  .timer-bar { flex-direction: column; align-items: flex-start; gap: 10px; }
+
+  /* Checklist rows breathe */
+  .cl-date { width: 100%; }
+
+  /* Tables: allow horizontal scroll cleanly */
+  table { min-width: 560px; }
+}

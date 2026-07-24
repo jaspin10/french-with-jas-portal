@@ -5,6 +5,7 @@ import Login from './pages/Login'
 import PhonePrompt from './components/PhonePrompt'
 import { useAuth } from './hooks/useAuth'
 import Homework from './pages/Homework'
+import Students from './pages/Students'
 
 function Placeholder(props) {
   return (
@@ -50,7 +51,7 @@ export default function App() {
           {isTeacher ? (
             <>
               <Route path="/" element={<Placeholder title="Professor Dashboard" />} />
-              <Route path="/students" element={<Placeholder title="Students" />} />
+              <Route path="/students" element={<Students />} />
               <Route path="/homework-manager" element={<Placeholder title="Homework Manager" />} />
               <Route path="/inbox" element={<Placeholder title="Submissions Inbox" />} />
             </>

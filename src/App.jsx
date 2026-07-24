@@ -9,6 +9,7 @@ import Students from './pages/Students'
 import Submissions from './pages/Submissions'
 import Dashboard from './pages/Dashboard'
 import HomeworkManager from './pages/HomeworkManager'
+import Inbox from './pages/Inbox'
 
 function Placeholder(props) {
   return (
@@ -56,7 +57,7 @@ export default function App() {
               <Route path="/" element={<Placeholder title="Professor Dashboard" />} />
               <Route path="/students" element={<Students />} />
               <Route path="/homework-manager" element={<HomeworkManager />} />
-              <Route path="/inbox" element={<Placeholder title="Submissions Inbox" />} />
+              <Route path="/inbox" element={<Inbox />} />
             </>
           ) : (
             <>

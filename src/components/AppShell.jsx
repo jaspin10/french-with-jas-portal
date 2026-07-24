@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 const studentNav = [
   { to: '/', label: 'Dashboard', icon: 'D' },
   { to: '/homework', label: 'Homework', icon: 'H' },
+  { to: '/my-tenses', label: 'My Tenses', icon: 'T' },
   { to: '/submissions', label: 'Submissions', icon: 'S' },
   { to: '/results', label: 'My Results', icon: 'R' },
   { to: '/class', label: 'Class', icon: 'C' },

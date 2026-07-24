@@ -1,38 +1,46 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 
 export function useAuth() {
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      if (!data.session) setLoading(false);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
+    supabase.auth.getSession().then(function (res) {
+      setSession(res.data.session)
+      if (!res.data.session) setLoading(false)
+    })
+    const sub = supabase.auth.onAuthStateChange(function (_event, s) {
+      setSession(s)
       if (!s) {
-        setProfile(null);
-        setLoading(false);
+        setProfile(null)
+        setLoading(false)
       }
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
+    })
+    return function () {
+      sub.data.subscription.unsubscribe()
+    }
+  }, [])
 
   useEffect(() => {
-    if (!session) return;
+    if (!session) return
+    let cancelled = false
     supabase
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
-      .single()
-      .then(({ data }) => {
-        setProfile(data);
-        setLoading(false);
-      });
-  }, [session]);
+      .maybeSingle()
+      .then(function (res) {
+        if (cancelled) return
+        if (res.error) console.error('Profile fetch error:', res.error)
+        setProfile(res.data)
+        setLoading(false)
+      })
+    return function () {
+      cancelled = true
+    }
+  }, [session])
 
-  return { session, profile, loading };
+  return { session, profile, loading }
 }

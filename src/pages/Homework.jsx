@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useStudyTimer } from '../hooks/useStudyTimer'
+import ThemeTable from '../components/ThemeTable'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -42,6 +43,7 @@ export default function Homework(props) {
   const [day, setDay] = useState('monday')
   const [loading, setLoading] = useState(true)
   const [weekendUnlocked, setWeekendUnlocked] = useState(false)
+  const [allHomeworks, setAllHomeworks] = useState([])
   const timer = useStudyTimer(
     profile ? profile.id : null,
     homework ? homework.id : null
@@ -74,6 +76,9 @@ export default function Homework(props) {
         .select('*')
         .eq('id', hwId)
         .maybeSingle()
+
+      const allRes = await supabase.from('homeworks').select('*').order('id')
+      setAllHomeworks(allRes.data || [])
 
       const contentRes = await supabase
         .from('homework_content')
@@ -145,6 +150,8 @@ export default function Homework(props) {
           </div>
         </div>
       </div>
+
+      <ThemeTable homeworks={allHomeworks} currentId={homework.id} />
 
       <div className="day-tabs">
         {DAYS.map(function (d) {

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import StudentTenses from '../components/StudentTenses'
 
 function ymd(date) {
   return date.toISOString().slice(0, 10)
@@ -12,6 +13,7 @@ export default function Students() {
   const [subs, setSubs] = useState([])
   const [cycle, setCycle] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [expandedId, setExpandedId] = useState(null)
 
   async function load() {
     const sRes = await supabase
@@ -120,12 +122,13 @@ export default function Students() {
               <th style={{ padding: '10px 8px' }}>This week</th>
               <th style={{ padding: '10px 8px' }}>Last submission</th>
               <th style={{ padding: '10px 8px' }}>Weekend TCF</th>
+              <th style={{ padding: '10px 8px' }}>Tenses</th>
             </tr>
           </thead>
           <tbody>
             {students.length === 0 && (
               <tr>
-                <td colSpan="8" style={{ padding: 20, color: 'var(--text-muted)' }}>
+                <td colSpan="9" style={{ padding: 20, color: 'var(--text-muted)' }}>
                   No students yet.
                 </td>
               </tr>
@@ -136,7 +139,8 @@ export default function Students() {
               const last = lastSubmission(s.id)
               const thisWeek = submittedThisWeek(s.id)
               return (
-                <tr key={s.id} style={{ borderTop: '1px solid #F0F1F6' }}>
+                <Fragment key={s.id}>
+                <tr style={{ borderTop: '1px solid #F0F1F6' }}>
                   <td style={{ padding: '10px 8px', fontWeight: 600 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       {s.avatar_url ? (
@@ -197,7 +201,25 @@ export default function Students() {
                       {unlocked ? 'Unlocked ✓' : 'Locked — unlock'}
                     </button>
                   </td>
+                  <td style={{ padding: '10px 8px' }}>
+                    <button
+                      className="reveal-btn"
+                      onClick={function () {
+                        setExpandedId(expandedId === s.id ? null : s.id)
+                      }}
+                    >
+                      {expandedId === s.id ? 'Hide' : 'View'}
+                    </button>
+                  </td>
                 </tr>
+                {expandedId === s.id ? (
+                  <tr>
+                    <td colSpan="9" style={{ padding: '10px 8px', background: '#FAFAFE' }}>
+                      <StudentTenses studentId={s.id} />
+                    </td>
+                  </tr>
+                ) : null}
+                </Fragment>
               )
             })}
           </tbody>

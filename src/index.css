@@ -299,3 +299,22 @@ body {
   height: 100%; background: var(--primary); border-radius: 3px;
   transition: width 1s linear;
 }
+/* ---------- Submissions ---------- */
+.sub-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.sub-btn {
+  padding: 12px 18px; border-radius: 10px; border: none;
+  background: var(--primary); color: #fff; font-weight: 600;
+  font-size: 14px; cursor: pointer;
+}
+.sub-btn.secondary { background: var(--primary-soft); color: var(--primary); }
+.sub-btn.danger { background: var(--red); }
+.sub-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid #F0F1F6; font-size: 14px;
+}
+.sub-item:last-child { border-bottom: none; }
+.pill {
+  padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700;
+}
+.pill.ontime { background: var(--green-soft); color: #157A3D; }
+.pill.late { background: var(--red-soft); color: var(--red); }

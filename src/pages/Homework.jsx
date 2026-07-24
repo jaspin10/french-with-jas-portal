@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useStudyTimer } from '../hooks/useStudyTimer'
 import ThemeTable from '../components/ThemeTable'
+import VerbSheet from '../components/VerbSheet'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -191,6 +192,15 @@ export default function Homework(props) {
                 Block {block.num}
               </div>
               {block.items.map(function (item) {
+                if (item.item_type === 'verb_sheet') {
+                  return (
+                    <VerbSheet
+                      key={item.id}
+                      verb={item.prompt}
+                      data={item.extra}
+                    />
+                  )
+                }
                 return (
                   <SolveRow
                     key={item.id}

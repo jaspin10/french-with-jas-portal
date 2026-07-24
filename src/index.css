@@ -335,3 +335,11 @@ body {
 .cl-check input { accent-color: var(--primary); width: 16px; height: 16px; cursor: pointer; }
 .cl-check.auto { color: var(--text-muted); cursor: default; }
 .streak-flame { font-size: 18px; }
+/* ---------- Verb sheets ---------- */
+.verb-sheet { padding: 4px 0; }
+.verb-title {
+  font-size: 17px; font-weight: 800; color: var(--primary);
+  margin-bottom: 12px; text-transform: lowercase; font-style: italic;
+}
+.verb-tenses { display: flex; flex-direction: column; gap: 8px; }
+.verb-tense-block { }

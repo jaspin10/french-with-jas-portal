@@ -191,7 +191,9 @@ export default function Homework(props) {
             <div className="card block-card" key={block.num}>
               <div className="block-title">
                 <span className="block-num">{block.num}</span>
-                Block {block.num}
+                {block.items.some(function (i) { return i.item_type === 'verb_sheet' })
+                  ? 'Verb test'
+                  : 'Block ' + block.num}
               </div>
               {block.items.map(function (item) {
                 if (item.item_type === 'verb_sheet') {

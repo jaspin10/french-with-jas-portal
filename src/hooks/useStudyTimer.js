@@ -84,6 +84,15 @@ export function useStudyTimer(studentId, homeworkId) {
         .then(function (res) {
           if (res.error) console.error('Timer save error:', res.error)
         })
+        if (current >= 3 * 3600) {
+            supabase
+              .from('checklist_days')
+              .upsert(
+                { student_id: studentId, day: today, four_hour_met: true },
+                { onConflict: 'student_id,day' }
+              )
+              .then(function () {})
+          }
       return current
     })
   }

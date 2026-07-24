@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { useStudyTimer } from '../hooks/useStudyTimer'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -41,6 +42,21 @@ export default function Homework(props) {
   const [day, setDay] = useState('monday')
   const [loading, setLoading] = useState(true)
   const [weekendUnlocked, setWeekendUnlocked] = useState(false)
+  const timer = useStudyTimer(
+    profile ? profile.id : null,
+    homework ? homework.id : null
+  )
+
+  function fmt(total) {
+    const h = Math.floor(total / 3600)
+    const m = Math.floor((total % 3600) / 60)
+    const s = total % 60
+    return (
+      (h > 0 ? h + 'h ' : '') +
+      String(m).padStart(2, '0') + 'm ' +
+      String(s).padStart(2, '0') + 's'
+    )
+  }
 
   useEffect(function () {
     async function load() {
@@ -108,6 +124,26 @@ export default function Homework(props) {
         {homework.custom_message && (
           <div className="hw-message">{homework.custom_message}</div>
         )}
+      </div>
+
+      <div className="timer-bar">
+        <div>
+          <span className="timer-time">{fmt(timer.seconds)}</span>
+          <span className={'timer-state ' + (timer.active ? 'on' : 'off')}>
+            {timer.active ? '● tracking' : '❚❚ paused (inactive)'}
+          </span>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <div className="timer-target">
+            Homework target: 3h — {Math.min(100, Math.round(timer.seconds / 108)) }%
+          </div>
+          <div className="timer-progress">
+            <div
+              className="timer-progress-fill"
+              style={{ width: Math.min(100, timer.seconds / 108) + '%' }}
+            />
+          </div>
+        </div>
       </div>
 
       <div className="day-tabs">

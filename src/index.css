@@ -279,3 +279,23 @@ body {
 .locked-panel {
   text-align: center; padding: 48px 20px; color: var(--text-muted);
 }
+
+/* ---------- Timer ---------- */
+.timer-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 14px 20px; margin-bottom: 16px;
+}
+.timer-time { font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.timer-state { font-size: 12px; font-weight: 600; margin-left: 10px; }
+.timer-state.on { color: var(--green); }
+.timer-state.off { color: var(--text-muted); }
+.timer-target { font-size: 13px; color: var(--text-muted); }
+.timer-progress {
+  height: 6px; border-radius: 3px; background: #EEF0F6;
+  width: 160px; overflow: hidden; margin-top: 6px;
+}
+.timer-progress-fill {
+  height: 100%; background: var(--primary); border-radius: 3px;
+  transition: width 1s linear;
+}

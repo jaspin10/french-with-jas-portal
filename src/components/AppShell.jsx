@@ -1,28 +1,28 @@
-import { NavLink, Outlet } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
+import { NavLink, Outlet } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 const studentNav = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/homework', label: 'Homework' },
-  { to: '/submissions', label: 'Submissions' },
-  { to: '/results', label: 'My Results' },
-  { to: '/class', label: 'Class' },
-];
+  { to: '/', label: 'Dashboard', icon: 'D' },
+  { to: '/homework', label: 'Homework', icon: 'H' },
+  { to: '/submissions', label: 'Submissions', icon: 'S' },
+  { to: '/results', label: 'My Results', icon: 'R' },
+  { to: '/class', label: 'Class', icon: 'C' },
+]
 
 const teacherNav = [
-  { to: '/', label: 'Dashboard' },
-  { to: '/students', label: 'Students' },
-  { to: '/homework-manager', label: 'Homework Manager' },
-  { to: '/inbox', label: 'Submissions Inbox' },
-];
+  { to: '/', label: 'Dashboard', icon: 'D' },
+  { to: '/students', label: 'Students', icon: 'S' },
+  { to: '/homework-manager', label: 'Homework Manager', icon: 'H' },
+  { to: '/inbox', label: 'Submissions Inbox', icon: 'I' },
+]
 
 export default function AppShell({ profile, isTeacher }) {
-  const nav = isTeacher ? teacherNav : studentNav;
-  const name = (profile && profile.full_name) || 'Student';
-  const initial = name.charAt(0).toUpperCase();
+  const nav = isTeacher ? teacherNav : studentNav
+  const name = (profile && profile.full_name) || 'Student'
+  const initial = name.charAt(0).toUpperCase()
 
   function handleSignOut() {
-    supabase.auth.signOut();
+    supabase.auth.signOut()
   }
 
   return (
@@ -42,12 +42,12 @@ export default function AppShell({ profile, isTeacher }) {
               to={item.to}
               end={item.to === '/'}
               className={function (state) {
-                return 'nav-item' + (state.isActive ? ' active' : '');
+                return 'nav-item' + (state.isActive ? ' active' : '')
               }}
             >
               {item.label}
             </NavLink>
-          );
+          )
         })}
 
         <div className="nav-section">Account</div>
@@ -55,14 +55,7 @@ export default function AppShell({ profile, isTeacher }) {
         <button
           type="button"
           className="nav-item"
-          style={{
-            width: '100%',
-            border: 'none',
-            background: 'none',
-            cursor: 'pointer',
-            textAlign: 'left',
-            fontSize: 14,
-          }}
+          style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 14 }}
           onClick={handleSignOut}
         >
           Sign out
@@ -90,11 +83,8 @@ export default function AppShell({ profile, isTeacher }) {
           <Outlet />
         </main>
       </div>
-    </div>
-  );
-}
 
-<nav className="bottom-nav">
+      <nav className="bottom-nav">
         {nav.map(function (item) {
           return (
             <NavLink
@@ -105,18 +95,12 @@ export default function AppShell({ profile, isTeacher }) {
                 return state.isActive ? 'active' : ''
               }}
             >
-              <span className="bn-icon">
-                {item.label === 'Dashboard' ? '⌂'
-                  : item.label === 'Homework' ? '✎'
-                  : item.label === 'Submissions' ? '↥'
-                  : item.label === 'My Results' ? '▤'
-                  : item.label === 'Class' ? '▶'
-                  : item.label === 'Students' ? '⚇'
-                  : item.label === 'Homework Manager' ? '▦'
-                  : '☰'}
-              </span>
+              <span className="bn-icon">{item.icon}</span>
               {item.label.split(' ')[0]}
             </NavLink>
           )
         })}
       </nav>
+    </div>
+  )
+}

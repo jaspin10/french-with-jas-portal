@@ -221,3 +221,61 @@ body {
     width: 140px;
   }
 }
+
+/* ---------- Homework page ---------- */
+.hw-header { margin-bottom: 20px; }
+.hw-theme { font-size: 22px; font-weight: 800; }
+.hw-meta { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+.hw-message {
+  background: var(--primary-soft); color: var(--primary);
+  border-radius: 10px; padding: 12px 16px; font-size: 14px;
+  margin-top: 12px; font-weight: 500;
+}
+
+.day-tabs {
+  display: flex; gap: 8px; margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.day-tab {
+  padding: 10px 18px; border-radius: 10px; border: none;
+  background: var(--card); color: var(--text-muted);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.day-tab.active { background: var(--primary); color: #fff; }
+.day-tab.locked { opacity: 0.55; cursor: not-allowed; }
+
+.block-card { margin-bottom: 16px; }
+.block-title {
+  font-size: 15px; font-weight: 700; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.block-num {
+  width: 26px; height: 26px; border-radius: 8px;
+  background: var(--primary-soft); color: var(--primary);
+  display: grid; place-items: center; font-size: 13px;
+}
+
+.solve-row { padding: 14px 0; border-bottom: 1px solid #F0F1F6; }
+.solve-row:last-child { border-bottom: none; }
+.solve-prompt { font-size: 15px; margin-bottom: 10px; }
+.solve-input {
+  width: 100%; padding: 10px 14px; border-radius: 10px;
+  border: 1px solid #E3E5EE; font-size: 14px;
+  font-family: inherit; color: var(--text); outline: none;
+  resize: vertical; min-height: 44px; background: #FBFBFD;
+}
+.solve-input:focus { border-color: var(--primary); }
+.reveal-btn {
+  margin-top: 10px; padding: 8px 14px; border-radius: 8px;
+  border: none; background: var(--primary-soft); color: var(--primary);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.correction {
+  margin-top: 10px; padding: 12px 14px; border-radius: 10px;
+  background: var(--green-soft); color: #157A3D;
+  font-size: 14px; white-space: pre-wrap;
+}
+.locked-panel {
+  text-align: center; padding: 48px 20px; color: var(--text-muted);
+}

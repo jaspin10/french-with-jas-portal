@@ -35,17 +35,23 @@ export default function HomeworkManager() {
 
   async function advanceWeek() {
     const next = nextInRotation(cycle.current_homework_id)
+    const isWrap = cycle.current_homework_id >= 25
     const ok = window.confirm(
       'Advance the global cycle to Week ' + next + '? ' +
-      'Every student in Levels 2-4 will immediately receive this homework.'
+      'Every student in Levels 2-4 will immediately receive this homework.' +
+      (isWrap ? ' This also starts a NEW ROTATION CYCLE: all verb tests reset for fresh attempts.' : '')
     )
     if (!ok) return
+    const updates = {
+      current_homework_id: next,
+      week_started_on: new Date().toISOString().slice(0, 10)
+    }
+    if (isWrap) {
+      updates.cycle_number = (cycle.cycle_number || 1) + 1
+    }
     await supabase
       .from('global_cycle')
-      .update({
-        current_homework_id: next,
-        week_started_on: new Date().toISOString().slice(0, 10)
-      })
+      .update(updates)
       .eq('id', 1)
     load()
   }

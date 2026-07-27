@@ -5,6 +5,7 @@ import ThemeTable from '../components/ThemeTable'
 import VerbSheetV2 from '../components/VerbSheetV2'
 import DrillBlock from '../components/DrillBlock'
 import { VideoItem, ReadingItem, WritingItem, AudioTaskItem, InstructionsItem } from '../components/ContentItems'
+import LadderBlock from '../components/LadderBlock'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -219,6 +220,9 @@ export default function Homework(props) {
             return item.item_type === 'solve' || item.item_type === 'instructions'
           })
           const isDrill = hasSolve && onlySolveAndInfo
+          const isLadder = visibleItems.some(function (item) {
+            return item.extra && item.extra.mode === 'one_by_one'
+          })
 
           return (
             <div className="card block-card" key={block.num}>
@@ -230,7 +234,12 @@ export default function Homework(props) {
                   return hasVerbSheet ? 'Verb test' : 'Block ' + block.num
                 })()}
               </div>
-              {isDrill ? (
+              {isLadder ? (
+                <LadderBlock
+                  items={visibleItems}
+                  profile={profile}
+                />
+              ) : isDrill ? (
                 <DrillBlock
                   items={visibleItems}
                   profile={profile}

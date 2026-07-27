@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useStudyTimer } from '../hooks/useStudyTimer'
 import ThemeTable from '../components/ThemeTable'
-import VerbSheetV2 from '../components/VerbSheetV2'
+import VerbSheet from '../components/VerbSheet'
 import DrillBlock from '../components/DrillBlock'
+import { VideoItem, ReadingItem, WritingItem, AudioTaskItem, InstructionsItem } from '../components/ContentItems'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -41,12 +42,12 @@ function SolveRow(props) {
 export default function Homework(props) {
   const profile = props.profile
   const [homework, setHomework] = useState(null)
+  const [allHomeworks, setAllHomeworks] = useState([])
   const [content, setContent] = useState([])
   const [day, setDay] = useState('monday')
   const [loading, setLoading] = useState(true)
   const [weekendUnlocked, setWeekendUnlocked] = useState(false)
-  const [allHomeworks, setAllHomeworks] = useState([])
-  const [cycleNumber, setCycleNumber] = useState(1)
+
   const timer = useStudyTimer(
     profile ? profile.id : null,
     homework ? homework.id : null
@@ -67,13 +68,12 @@ export default function Homework(props) {
     async function load() {
       const cycleRes = await supabase
         .from('global_cycle')
-        .select('current_homework_id, cycle_number')
+        .select('current_homework_id')
         .eq('id', 1)
         .maybeSingle()
 
       if (!cycleRes.data) { setLoading(false); return }
       const hwId = cycleRes.data.current_homework_id
-      setCycleNumber(cycleRes.data.cycle_number || 1)
 
       const hwRes = await supabase
         .from('homeworks')
@@ -82,7 +82,6 @@ export default function Homework(props) {
         .maybeSingle()
 
       const allRes = await supabase.from('homeworks').select('*').order('id')
-      setAllHomeworks(allRes.data || [])
 
       const contentRes = await supabase
         .from('homework_content')
@@ -104,6 +103,7 @@ export default function Homework(props) {
       }
 
       setHomework(hwRes.data)
+      setAllHomeworks(allRes.data || [])
       setContent(contentRes.data || [])
       setWeekendUnlocked(unlocked)
       setLoading(false)
@@ -116,7 +116,14 @@ export default function Homework(props) {
 
   const isWeekend = day === 'weekend'
   const dayContent = content.filter(function (c) { return c.day === day })
-  const blocks = [1, 2, 3].map(function (n) {
+
+  const blockNums = []
+  dayContent.forEach(function (c) {
+    if (blockNums.indexOf(c.block) === -1) blockNums.push(c.block)
+  })
+  blockNums.sort(function (a, b) { return a - b })
+
+  const blocks = blockNums.map(function (n) {
     return {
       num: n,
       items: dayContent.filter(function (c) { return c.block === n })
@@ -144,7 +151,7 @@ export default function Homework(props) {
         </div>
         <div style={{ textAlign: 'right' }}>
           <div className="timer-target">
-            Homework target: 3h — {Math.min(100, Math.round(timer.seconds / 108)) }%
+            Homework target: 3h — {Math.min(100, Math.round(timer.seconds / 108))}%
           </div>
           <div className="timer-progress">
             <div
@@ -170,7 +177,7 @@ export default function Homework(props) {
               }
               onClick={function () { if (!locked) setDay(d.key) }}
             >
-              {d.label}{locked ? ' [locked]' : ''}
+              {d.label}{locked ? ' 🔒' : ''}
             </button>
           )
         })}
@@ -187,8 +194,6 @@ export default function Homework(props) {
         </div>
       ) : (
         blocks.map(function (block) {
-          if (block.items.length === 0) return null
-
           const visibleItems = block.items.filter(function (item) {
             const lvl = Number(profile.level)
             const minL = item.min_level != null ? Number(item.min_level) : 0
@@ -202,9 +207,13 @@ export default function Homework(props) {
           })
           if (visibleItems.length === 0) return null
 
-          const isDrill = visibleItems.every(function (item) {
+          const hasSolve = visibleItems.some(function (item) {
+            return item.item_type === 'solve'
+          })
+          const onlySolveAndInfo = visibleItems.every(function (item) {
             return item.item_type === 'solve' || item.item_type === 'instructions'
-          }) && visibleItems.some(function (item) { return item.item_type === 'solve' })
+          })
+          const isDrill = hasSolve && onlySolveAndInfo
 
           return (
             <div className="card block-card" key={block.num}>

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useStudyTimer } from '../hooks/useStudyTimer'
 import ThemeTable from '../components/ThemeTable'
 import VerbSheetV2 from '../components/VerbSheetV2'
+import DrillBlock from '../components/DrillBlock'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -187,34 +188,61 @@ export default function Homework(props) {
       ) : (
         blocks.map(function (block) {
           if (block.items.length === 0) return null
+
+          const visibleItems = block.items.filter(function (item) {
+            const lvl = Number(profile.level)
+            const minL = item.min_level != null ? Number(item.min_level) : 0
+            const maxL = item.max_level != null ? Number(item.max_level) : 99
+            if (lvl < minL || lvl > maxL) return false
+            if (
+              profile.track === 'oral_only' &&
+              (item.skill_tag === 'reading' || item.skill_tag === 'writing')
+            ) return false
+            return true
+          })
+          if (visibleItems.length === 0) return null
+
+          const isDrill = visibleItems.every(function (item) {
+            return item.item_type === 'solve' || item.item_type === 'instructions'
+          }) && visibleItems.some(function (item) { return item.item_type === 'solve' })
+
           return (
             <div className="card block-card" key={block.num}>
               <div className="block-title">
                 <span className="block-num">{block.num}</span>
-                {block.items.some(function (i) { return i.item_type === 'verb_sheet' })
-                  ? 'Verb test'
-                  : 'Block ' + block.num}
+                Block {block.num}
               </div>
-              {block.items.map(function (item) {
-                if (item.item_type === 'verb_sheet') {
-                  return (
-                    <VerbSheetV2
-                      key={item.id}
-                      item={item}
-                      profile={profile}
-                      homeworkId={homework.id}
-                      cycleNumber={cycleNumber}
-                    />
-                  )
-                }
-                return (
-                  <SolveRow
-                    key={item.id}
-                    prompt={item.prompt}
-                    correction={item.correction}
-                  />
-                )
-              })}
+              {isDrill ? (
+                <DrillBlock
+                  items={visibleItems}
+                  profile={profile}
+                  homeworkId={homework.id}
+                  day={day}
+                  block={block.num}
+                />
+              ) : (
+                visibleItems.map(function (item) {
+                  if (item.item_type === 'verb_sheet') {
+                    return <VerbSheet key={item.id} verb={item.prompt} data={item.extra} />
+                  }
+                  if (item.item_type === 'video') {
+                    return <VideoItem key={item.id} item={item} />
+                  }
+                  if (item.item_type === 'reading') {
+                    return <ReadingItem key={item.id} item={item} />
+                  }
+                  if (item.item_type === 'writing') {
+                    return <WritingItem key={item.id} item={item} profile={profile} />
+                  }
+                  if (item.item_type === 'audio_task') {
+                    return <AudioTaskItem key={item.id} item={item} />
+                  }
+                  if (item.item_type === 'instructions') {
+                    return <InstructionsItem key={item.id} item={item} />
+                  }
+                  return <SolveRow key={item.id} prompt={item.prompt} correction={item.correction} />
+                })
+              )}
             </div>
           )
         })

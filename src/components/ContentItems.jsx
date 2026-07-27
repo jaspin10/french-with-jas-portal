@@ -120,11 +120,34 @@ export function AudioTaskItem(props) {
 }
 
 export function InstructionsItem(props) {
-  return (
-    <div className="solve-row">
-      <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-        {props.item.prompt}
+    const extra = props.item.extra || {}
+    const collapsible = extra.collapsible === true
+    const [open, setOpen] = useState(false)
+  
+    if (!collapsible) {
+      return (
+        <div className="solve-row">
+          <div style={{ fontSize: 14, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            {props.item.prompt}
+          </div>
+        </div>
+      )
+    }
+  
+    return (
+      <div style={{ marginBottom: 14 }}>
+        <button className="reveal-btn" style={{ marginTop: 0 }} onClick={function () { setOpen(!open) }}>
+          {open ? 'Hide instructions' : 'Show instructions — how to translate each structure'}
+        </button>
+        {open && (
+          <div style={{
+            marginTop: 10, background: '#FBFBFD', border: '1px solid #E3E5EE',
+            borderRadius: 12, padding: 16, fontSize: 13.5, lineHeight: 1.9,
+            whiteSpace: 'pre-wrap', fontVariantNumeric: 'tabular-nums'
+          }}>
+            {props.item.prompt}
+          </div>
+        )}
       </div>
-    </div>
-  )
-}
+    )
+  }

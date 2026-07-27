@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { InstructionsItem } from './ContentItems'
 
 function normalize(s) {
   return (s || '')
@@ -97,11 +98,7 @@ export default function DrillBlock(props) {
   return (
     <div>
       {infoItems.map(function (i) {
-        return (
-          <div key={i.id} style={{ fontSize: 14, lineHeight: 1.7, marginBottom: 14, whiteSpace: 'pre-wrap' }}>
-            {i.prompt}
-          </div>
-        )
+        return <InstructionsItem key={i.id} item={i} />
       })}
 
       {done && (

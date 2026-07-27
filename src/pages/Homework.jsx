@@ -224,7 +224,11 @@ export default function Homework(props) {
             <div className="card block-card" key={block.num}>
               <div className="block-title">
                 <span className="block-num">{block.num}</span>
-                {hasVerbSheet ? 'Verb test' : 'Block ' + block.num}
+                {(function () {
+                  const titled = block.items.find(function (i) { return i.block_title })
+                  if (titled) return titled.block_title
+                  return hasVerbSheet ? 'Verb test' : 'Block ' + block.num
+                })()}
               </div>
               {isDrill ? (
                 <DrillBlock

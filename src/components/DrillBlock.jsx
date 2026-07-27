@@ -125,15 +125,14 @@ export default function DrillBlock(props) {
               flexWrap: 'wrap'
             }}
           >
-            <div style={{ flex: '1 1 240px', fontSize: 14 }}>
+            <div style={{ flex: '0 1 auto', minWidth: 200, fontSize: 14 }}>
               <span style={{ color: 'var(--text-muted)', marginRight: 6 }}>{idx + 1}.</span>
               {item.prompt.replace('Traduis : ', '')}
             </div>
             <input
               className="solve-input"
               style={{
-                flex: '1 1 220px', minHeight: 0, padding: '7px 12px',
-                maxWidth: 320,
+                flex: '0 1 260px', minHeight: 0, padding: '7px 12px',
                 borderColor: done ? (correct ? 'var(--green)' : 'var(--red)') : undefined,
                 background: done ? '#fff' : undefined
               }}

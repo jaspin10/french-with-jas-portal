@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useStudyTimer } from '../hooks/useStudyTimer'
 import ThemeTable from '../components/ThemeTable'
-import VerbSheet from '../components/VerbSheet'
+import VerbSheetV2 from '../components/VerbSheetV2'
 import DrillBlock from '../components/DrillBlock'
 import { VideoItem, ReadingItem, WritingItem, AudioTaskItem, InstructionsItem } from '../components/ContentItems'
 
@@ -44,6 +44,7 @@ export default function Homework(props) {
   const [homework, setHomework] = useState(null)
   const [allHomeworks, setAllHomeworks] = useState([])
   const [content, setContent] = useState([])
+  const [cycleNumber, setCycleNumber] = useState(1)
   const [day, setDay] = useState('monday')
   const [loading, setLoading] = useState(true)
   const [weekendUnlocked, setWeekendUnlocked] = useState(false)
@@ -68,7 +69,7 @@ export default function Homework(props) {
     async function load() {
       const cycleRes = await supabase
         .from('global_cycle')
-        .select('current_homework_id')
+        .select('current_homework_id, cycle_number')
         .eq('id', 1)
         .maybeSingle()
 
@@ -105,6 +106,7 @@ export default function Homework(props) {
       setHomework(hwRes.data)
       setAllHomeworks(allRes.data || [])
       setContent(contentRes.data || [])
+      setCycleNumber(cycleRes.data.cycle_number || 1)
       setWeekendUnlocked(unlocked)
       setLoading(false)
     }
@@ -177,7 +179,7 @@ export default function Homework(props) {
               }
               onClick={function () { if (!locked) setDay(d.key) }}
             >
-              {d.label}{locked ? ' 🔒' : ''}
+              {d.label}{locked ? ' (locked)' : ''}
             </button>
           )
         })}
@@ -207,6 +209,9 @@ export default function Homework(props) {
           })
           if (visibleItems.length === 0) return null
 
+          const hasVerbSheet = visibleItems.some(function (item) {
+            return item.item_type === 'verb_sheet'
+          })
           const hasSolve = visibleItems.some(function (item) {
             return item.item_type === 'solve'
           })
@@ -219,7 +224,7 @@ export default function Homework(props) {
             <div className="card block-card" key={block.num}>
               <div className="block-title">
                 <span className="block-num">{block.num}</span>
-                Block {block.num}
+                {hasVerbSheet ? 'Verb test' : 'Block ' + block.num}
               </div>
               {isDrill ? (
                 <DrillBlock
@@ -232,7 +237,15 @@ export default function Homework(props) {
               ) : (
                 visibleItems.map(function (item) {
                   if (item.item_type === 'verb_sheet') {
-                    return <VerbSheet key={item.id} verb={item.prompt} data={item.extra} />
+                    return (
+                      <VerbSheetV2
+                        key={item.id}
+                        item={item}
+                        profile={profile}
+                        homeworkId={homework.id}
+                        cycleNumber={cycleNumber}
+                      />
+                    )
                   }
                   if (item.item_type === 'video') {
                     return <VideoItem key={item.id} item={item} />

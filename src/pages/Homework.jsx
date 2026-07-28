@@ -6,6 +6,7 @@ import VerbSheetV2 from '../components/VerbSheetV2'
 import DrillBlock from '../components/DrillBlock'
 import { VideoItem, ReadingItem, WritingItem, AudioTaskItem, InstructionsItem } from '../components/ContentItems'
 import LadderBlock from '../components/LadderBlock'
+import RapidFireBlock from '../components/RapidFireBlock'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -209,6 +210,23 @@ export default function Homework(props) {
             return true
           })
           if (visibleItems.length === 0) return null
+
+          const hasRapidFire = visibleItems.some(function (item) {
+            return item.item_type === 'rapid_fire'
+          })
+
+          if (hasRapidFire) {
+            return (
+              <RapidFireBlock
+                key={block.num}
+                item={visibleItems[0]}
+                user={profile}
+                homeworkId={homework.id}
+                day={day}
+                cycleNumber={cycleNumber}
+              />
+            )
+          }
 
           const hasVerbSheet = visibleItems.some(function (item) {
             return item.item_type === 'verb_sheet'

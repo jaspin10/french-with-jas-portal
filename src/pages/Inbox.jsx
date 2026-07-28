@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 export default function Inbox() {
   const [subs, setSubs] = useState([])
   const [students, setStudents] = useState([])
+  const [rfAttempts, setRfAttempts] = useState([])
   const [filter, setFilter] = useState('all')
   const [editingId, setEditingId] = useState(null)
   const [draftGrade, setDraftGrade] = useState('')
@@ -15,8 +16,12 @@ export default function Inbox() {
       .from('submissions').select('*').order('submitted_at', { ascending: false })
     const pRes = await supabase
       .from('profiles').select('id, full_name, avatar_url, level').eq('role', 'student')
+    const rfRes = await supabase
+      .from('rapid_fire_attempts')
+      .select('student_id, content_id, cycle_number, attempt_no, accepted')
     setSubs(sRes.data || [])
     setStudents(pRes.data || [])
+    setRfAttempts(rfRes.data || [])
     setLoading(false)
   }
 
@@ -24,6 +29,28 @@ export default function Inbox() {
 
   function studentOf(sub) {
     return students.find(function (s) { return s.id === sub.student_id }) || {}
+  }
+
+  function rapidFireInfo(sub) {
+    if (!sub.storage_path) return null
+    const m = sub.storage_path.match(/rapidfire_(\d+)_c(\d+)\.webm$/)
+    if (!m) return null
+    const contentId = Number(m[1])
+    const cycle = Number(m[2])
+    const cur = rfAttempts.filter(function (a) {
+      return a.student_id === sub.student_id &&
+        a.content_id === contentId &&
+        a.cycle_number === cycle
+    })
+    const prev = rfAttempts.filter(function (a) {
+      return a.student_id === sub.student_id &&
+        a.content_id === contentId &&
+        a.cycle_number === cycle - 1
+    })
+    return {
+      tries: cur.length,
+      prevTries: prev.length > 0 ? prev.length : null
+    }
   }
 
   async function openFile(sub) {
@@ -47,7 +74,6 @@ export default function Inbox() {
     }
     load()
   }
-
 
   function startGrading(sub) {
     setEditingId(sub.id)
@@ -112,7 +138,6 @@ export default function Inbox() {
             >
               {f === 'all' ? 'All' : f === 'ungraded' ? 'Awaiting feedback' : 'Late only'}
             </button>
-            
           )
         })}
       </div>
@@ -125,6 +150,7 @@ export default function Inbox() {
         )}
         {filtered.map(function (sub) {
           const st = studentOf(sub)
+          const rf = rapidFireInfo(sub)
           return (
             <div key={sub.id} style={{ padding: '16px 0', borderBottom: '1px solid #F0F1F6' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
@@ -141,6 +167,12 @@ export default function Inbox() {
                     <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                       HW {sub.homework_id} · {sub.kind} · {new Date(sub.submitted_at).toLocaleString()}
                     </div>
+                    {rf && (
+                      <div style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>
+                        Rapid Fire · accepted in {rf.tries} {rf.tries === 1 ? 'try' : 'tries'}
+                        {rf.prevTries !== null ? ' · last cycle: ' + rf.prevTries : ''}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -214,4 +246,3 @@ export default function Inbox() {
     </div>
   )
 }
-

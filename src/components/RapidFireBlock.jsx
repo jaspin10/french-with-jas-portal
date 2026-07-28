@@ -134,24 +134,24 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
       <div className="block-title">{item.block_title || 'Rapid Fire'}</div>
       <p>{item.prompt}</p>
 
-      <div style={{ marginBottom: 12 }}>
+      <div className="rf-meta">
         <span>Tries this week: {tries}</span>
         {prevTries !== null && <span> · Last cycle: {prevTries} tries</span>}
         {done && <span className="pill"> Completed</span>}
       </div>
 
-      <div style={{ marginBottom: 12 }}>
+      <div className="rf-tabs">
         <button className="day-tab" onClick={showPractice} disabled={mode === 'practice'}>Practice</button>
         <button className="day-tab" onClick={showRecord} disabled={mode === 'record'}>Record</button>
       </div>
 
       {mode === 'practice' && (
-        <ol>
+        <ol className="rf-list">
           {items.map(function (it, i) {
             return (
-              <li key={i} style={{ marginBottom: 8 }}>
+              <li key={i}>
                 <div>{it.en}</div>
-                <div style={{ color: '#6C5CE7' }}>{it.fr}</div>
+                <div className="rf-fr">{it.fr}</div>
               </li>
             );
           })}
@@ -160,9 +160,9 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
 
       {mode === 'record' && (
         <div>
-          <ol>
+          <ol className="rf-list">
             {items.map(function (it, i) {
-              return <li key={i} style={{ marginBottom: 6 }}>{it.en}</li>;
+              return <li key={i}>{it.en}</li>;
             })}
           </ol>
 

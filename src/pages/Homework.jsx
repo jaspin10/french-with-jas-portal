@@ -7,6 +7,7 @@ import DrillBlock from '../components/DrillBlock'
 import { VideoItem, ReadingItem, WritingItem, AudioTaskItem, InstructionsItem } from '../components/ContentItems'
 import LadderBlock from '../components/LadderBlock'
 import RapidFireBlock from '../components/RapidFireBlock'
+import ImageDescribeBlock from '../components/ImageDescribeBlock'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -218,6 +219,23 @@ export default function Homework(props) {
           if (hasRapidFire) {
             return (
               <RapidFireBlock
+                key={block.num}
+                item={visibleItems[0]}
+                user={profile}
+                homeworkId={homework.id}
+                day={day}
+                cycleNumber={cycleNumber}
+              />
+            )
+          }
+
+          const hasImageDescribe = visibleItems.some(function (item) {
+            return item.item_type === 'image_describe'
+          })
+
+          if (hasImageDescribe) {
+            return (
+              <ImageDescribeBlock
                 key={block.num}
                 item={visibleItems[0]}
                 user={profile}

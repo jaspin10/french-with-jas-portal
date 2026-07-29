@@ -660,3 +660,34 @@ body {
   font-size: 13px;
   margin-bottom: 8px;
 }
+
+.idb-image {
+  width: 100%;
+  max-width: 640px;
+  border-radius: 14px;
+  display: block;
+  margin: 12px 0;
+}
+.idb-timer {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 10px 0;
+  color: #e17055;
+}
+.idb-timer-ok {
+  color: #00b894;
+}
+.idb-done {
+  color: #00b894;
+  font-weight: 600;
+  margin-top: 10px;
+}
+.idb-error {
+  color: #d63031;
+  font-weight: 600;
+  margin-top: 10px;
+}
+.pill-done {
+  background: #e6f9f2;
+  color: #00b894;
+}

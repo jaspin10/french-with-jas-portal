@@ -5,6 +5,7 @@ export default function Inbox() {
   const [subs, setSubs] = useState([])
   const [students, setStudents] = useState([])
   const [rfAttempts, setRfAttempts] = useState([])
+  const [idbAttempts, setIdbAttempts] = useState([])
   const [filter, setFilter] = useState('all')
   const [editingId, setEditingId] = useState(null)
   const [draftGrade, setDraftGrade] = useState('')
@@ -19,9 +20,13 @@ export default function Inbox() {
     const rfRes = await supabase
       .from('rapid_fire_attempts')
       .select('student_id, content_id, cycle_number, attempt_no, accepted')
+    const idbRes = await supabase
+      .from('image_describe_attempts')
+      .select('student_id, content_id, step_no, cycle_number, accepted')
     setSubs(sRes.data || [])
     setStudents(pRes.data || [])
     setRfAttempts(rfRes.data || [])
+    setIdbAttempts(idbRes.data || [])
     setLoading(false)
   }
 
@@ -48,6 +53,34 @@ export default function Inbox() {
         a.cycle_number === cycle - 1
     })
     return {
+      tries: cur.length,
+      prevTries: prev.length > 0 ? prev.length : null
+    }
+  }
+
+  function imageDescribeInfo(sub) {
+    if (!sub.storage_path) return null
+    const m = sub.storage_path.match(/imgdesc_(\d+)_s(\d+)_c(\d+)\.webm$/)
+    if (!m) return null
+    const contentId = Number(m[1])
+    const stepNo = Number(m[2])
+    const cycle = Number(m[3])
+    const cur = idbAttempts.filter(function (a) {
+      return a.student_id === sub.student_id &&
+        a.content_id === contentId &&
+        a.step_no === stepNo &&
+        a.cycle_number === cycle
+    })
+    const prev = idbAttempts.filter(function (a) {
+      return a.student_id === sub.student_id &&
+        a.content_id === contentId &&
+        a.step_no === stepNo &&
+        a.cycle_number === cycle - 1
+    })
+    const labels = { 1: 'What I see', 2: 'What is happening', 3: 'What I think' }
+    return {
+      stepNo: stepNo,
+      label: labels[stepNo] || '',
       tries: cur.length,
       prevTries: prev.length > 0 ? prev.length : null
     }
@@ -151,6 +184,7 @@ export default function Inbox() {
         {filtered.map(function (sub) {
           const st = studentOf(sub)
           const rf = rapidFireInfo(sub)
+          const idb = imageDescribeInfo(sub)
           return (
             <div key={sub.id} style={{ padding: '16px 0', borderBottom: '1px solid #F0F1F6' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
@@ -171,6 +205,12 @@ export default function Inbox() {
                       <div style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>
                         Rapid Fire · accepted in {rf.tries} {rf.tries === 1 ? 'try' : 'tries'}
                         {rf.prevTries !== null ? ' · last cycle: ' + rf.prevTries : ''}
+                      </div>
+                    )}
+                    {idb && (
+                      <div style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>
+                        Image description · Step {idb.stepNo} ({idb.label}) · {idb.tries} {idb.tries === 1 ? 'try' : 'tries'}
+                        {idb.prevTries !== null ? ' · last cycle: ' + idb.prevTries : ''}
                       </div>
                     )}
                   </div>

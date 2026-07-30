@@ -11,6 +11,7 @@ import Dashboard from './pages/Dashboard'
 import HomeworkManager from './pages/HomeworkManager'
 import Inbox from './pages/Inbox'
 import MyTenses from './pages/MyTenses'
+import ClassPage from './pages/ClassPage'
 
 function Placeholder(props) {
   return (
@@ -67,7 +68,7 @@ export default function App() {
               <Route path="/submissions" element={<Submissions profile={profile} />} />
               <Route path="/results" element={<Placeholder title="My Results" />} />
               <Route path="/my-tenses" element={<MyTenses profile={profile} />} />
-              <Route path="/class" element={<Placeholder title="Class" />} />
+              <Route path="/class" element={<ClassPage profile={profile} />} />
             </>
           )}
           <Route path="*" element={<Navigate to="/" replace />} />

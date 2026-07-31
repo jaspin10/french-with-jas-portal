@@ -15,6 +15,7 @@ const teacherNav = [
   { to: '/students', label: 'Students', icon: 'S' },
   { to: '/homework-manager', label: 'Homework Manager', icon: 'H' },
   { to: '/inbox', label: 'Submissions Inbox', icon: 'I' },
+  { to: '/recordings', label: 'Recordings', icon: 'R' },
 ]
 
 export default function AppShell({ profile, isTeacher }) {

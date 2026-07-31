@@ -12,6 +12,7 @@ import HomeworkManager from './pages/HomeworkManager'
 import Inbox from './pages/Inbox'
 import MyTenses from './pages/MyTenses'
 import ClassPage from './pages/ClassPage'
+import RecordingsManager from './pages/RecordingsManager'
 
 function Placeholder(props) {
   return (
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="/students" element={<Students />} />
               <Route path="/homework-manager" element={<HomeworkManager />} />
               <Route path="/inbox" element={<Inbox />} />
+              <Route path="/recordings" element={<RecordingsManager />} />
             </>
           ) : (
             <>

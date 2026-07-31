@@ -6,6 +6,7 @@ export default function Inbox() {
   const [students, setStudents] = useState([])
   const [rfAttempts, setRfAttempts] = useState([])
   const [idbAttempts, setIdbAttempts] = useState([])
+  const [ptAttempts, setPtAttempts] = useState([])
   const [filter, setFilter] = useState('all')
   const [editingId, setEditingId] = useState(null)
   const [draftGrade, setDraftGrade] = useState('')
@@ -23,10 +24,14 @@ export default function Inbox() {
     const idbRes = await supabase
       .from('image_describe_attempts')
       .select('student_id, content_id, step_no, cycle_number, accepted')
+    const ptRes = await supabase
+      .from('process_attempts')
+      .select('student_id, content_id, step_no, cycle_number, duration_seconds, accepted')
     setSubs(sRes.data || [])
     setStudents(pRes.data || [])
     setRfAttempts(rfRes.data || [])
     setIdbAttempts(idbRes.data || [])
+    setPtAttempts(ptRes.data || [])
     setLoading(false)
   }
 
@@ -83,6 +88,54 @@ export default function Inbox() {
       label: labels[stepNo] || '',
       tries: cur.length,
       prevTries: prev.length > 0 ? prev.length : null
+    }
+  }
+
+  function processInfo(sub) {
+    if (!sub.storage_path) return null
+    const m = sub.storage_path.match(/process_(\d+)(?:_s(\d+))?_c(\d+)\.webm$/)
+    if (!m) return null
+    const contentId = Number(m[1])
+    const stepNo = m[2] ? Number(m[2]) : null
+    const cycle = Number(m[3])
+    const cur = ptAttempts.filter(function (a) {
+      return a.student_id === sub.student_id &&
+        a.content_id === contentId &&
+        a.step_no === stepNo &&
+        a.cycle_number === cycle
+    })
+    const prev = ptAttempts.filter(function (a) {
+      return a.student_id === sub.student_id &&
+        a.content_id === contentId &&
+        a.step_no === stepNo &&
+        a.cycle_number === cycle - 1
+    })
+    const acceptedRow = cur.find(function (a) { return a.accepted })
+    let duration = null
+    if (stepNo === null && acceptedRow) {
+      const mins = Math.floor(acceptedRow.duration_seconds / 60)
+      const secs = acceptedRow.duration_seconds % 60
+      duration = mins + ':' + (secs < 10 ? '0' : '') + secs
+    }
+    let prevDuration = null
+    if (stepNo === null) {
+      const prevAccepted = prev.filter(function (a) { return a.accepted })
+      let best = 0
+      prevAccepted.forEach(function (a) {
+        if (a.duration_seconds > best) best = a.duration_seconds
+      })
+      if (best > 0) {
+        const pm = Math.floor(best / 60)
+        const ps = best % 60
+        prevDuration = pm + ':' + (ps < 10 ? '0' : '') + ps
+      }
+    }
+    return {
+      stepNo: stepNo,
+      tries: cur.length,
+      prevTries: prev.length > 0 ? prev.length : null,
+      duration: duration,
+      prevDuration: prevDuration
     }
   }
 
@@ -185,6 +238,7 @@ export default function Inbox() {
           const st = studentOf(sub)
           const rf = rapidFireInfo(sub)
           const idb = imageDescribeInfo(sub)
+          const pt = processInfo(sub)
           return (
             <div key={sub.id} style={{ padding: '16px 0', borderBottom: '1px solid #F0F1F6' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
@@ -211,6 +265,15 @@ export default function Inbox() {
                       <div style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>
                         Image description · Step {idb.stepNo} ({idb.label}) · {idb.tries} {idb.tries === 1 ? 'try' : 'tries'}
                         {idb.prevTries !== null ? ' · last cycle: ' + idb.prevTries : ''}
+                      </div>
+                    )}
+                    {pt && (
+                      <div style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>
+                        Process telling · {pt.stepNo !== null ? 'Step ' + pt.stepNo : 'Full process'}
+                        {' · '}{pt.tries} {pt.tries === 1 ? 'try' : 'tries'}
+                        {pt.duration ? ' · duration ' + pt.duration : ''}
+                        {pt.prevTries !== null ? ' · last cycle: ' + pt.prevTries + ' tries' : ''}
+                        {pt.prevDuration ? ' (' + pt.prevDuration + ')' : ''}
                       </div>
                     )}
                   </div>
@@ -282,7 +345,7 @@ export default function Inbox() {
             </div>
           )
         })}
-      </div>
+          </div>
     </div>
   )
 }

@@ -8,6 +8,7 @@ import { VideoItem, ReadingItem, WritingItem, AudioTaskItem, InstructionsItem } 
 import LadderBlock from '../components/LadderBlock'
 import RapidFireBlock from '../components/RapidFireBlock'
 import ImageDescribeBlock from '../components/ImageDescribeBlock'
+import ProcessTellingBlock from '../components/ProcessTellingBlock'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -243,6 +244,29 @@ export default function Homework(props) {
                 day={day}
                 cycleNumber={cycleNumber}
               />
+            )
+          }
+
+          const processItem = visibleItems.find(function (item) {
+            return item.item_type === 'process_telling'
+          })
+
+          if (processItem) {
+            return (
+              <div key={block.num}>
+                {visibleItems
+                  .filter(function (item) { return item.item_type === 'instructions' })
+                  .map(function (item) {
+                    return <InstructionsItem key={item.id} item={item} />
+                  })}
+                <ProcessTellingBlock
+                  item={processItem}
+                  user={profile}
+                  homeworkId={homework.id}
+                  day={day}
+                  cycleNumber={cycleNumber}
+                />
+              </div>
             )
           }
 

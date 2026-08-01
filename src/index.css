@@ -803,3 +803,54 @@ body {
   gap: 10px;
   margin-top: 10px;
 }
+
+.st-guide {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 6px 0 10px;
+}
+
+/* Weekly progress card */
+.wp-card {
+  padding: 20px;
+}
+.wp-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #8A8F9E;
+  margin-bottom: 4px;
+}
+.wp-theme {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2D3436;
+  margin-bottom: 14px;
+}
+.wp-bar {
+  height: 8px;
+  border-radius: 6px;
+  background: #EEF0F6;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+.wp-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: #6C5CE7;
+  transition: width 0.4s ease;
+}
+.wp-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #8A8F9E;
+}
+.wp-pct {
+  font-size: 15px;
+  font-weight: 700;
+  color: #6C5CE7;
+}

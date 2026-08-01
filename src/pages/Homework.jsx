@@ -270,6 +270,20 @@ export default function Homework(props) {
             )
           }
 
+          const storyItem = blockItems.find(function (i) { return i.item_type === 'story_telling'; });
+          if (storyItem) {
+            return (
+              <StoryTellingBlock
+                key={'story' + storyItem.id}
+                item={storyItem}
+                user={profile}
+                homeworkId={homework.id}
+                day={activeDay}
+                cycleNumber={cycleNumber}
+              />
+            );
+          }
+
           const hasVerbSheet = visibleItems.some(function (item) {
             return item.item_type === 'verb_sheet'
           })

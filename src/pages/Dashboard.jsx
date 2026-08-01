@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import WeeklyProgressCard from '../components/WeeklyProgressCard'
 
 function ymd(date) {
   return date.toISOString().slice(0, 10)
@@ -139,6 +140,10 @@ export default function Dashboard(props) {
           </div>
           <div className="stat-label">Homework time today (target 3h)</div>
         </div>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <WeeklyProgressCard profile={profile} />
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>

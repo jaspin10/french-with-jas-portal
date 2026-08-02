@@ -9,6 +9,7 @@ import LadderBlock from '../components/LadderBlock'
 import RapidFireBlock from '../components/RapidFireBlock'
 import ImageDescribeBlock from '../components/ImageDescribeBlock'
 import ProcessTellingBlock from '../components/ProcessTellingBlock'
+import StoryTellingBlock from '../components/StoryTellingBlock'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -270,18 +271,27 @@ export default function Homework(props) {
             )
           }
 
-          const storyItem = blockItems.find(function (i) { return i.item_type === 'story_telling'; });
+          const storyItem = visibleItems.find(function (item) {
+            return item.item_type === 'story_telling'
+          })
+
           if (storyItem) {
             return (
-              <StoryTellingBlock
-                key={'story' + storyItem.id}
-                item={storyItem}
-                user={profile}
-                homeworkId={homework.id}
-                day={activeDay}
-                cycleNumber={cycleNumber}
-              />
-            );
+              <div key={block.num}>
+                {visibleItems
+                  .filter(function (item) { return item.item_type === 'instructions' })
+                  .map(function (item) {
+                    return <InstructionsItem key={item.id} item={item} />
+                  })}
+                <StoryTellingBlock
+                  item={storyItem}
+                  user={profile}
+                  homeworkId={homework.id}
+                  day={day}
+                  cycleNumber={cycleNumber}
+                />
+              </div>
+            )
           }
 
           const hasVerbSheet = visibleItems.some(function (item) {

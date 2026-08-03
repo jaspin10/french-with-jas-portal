@@ -26,6 +26,7 @@ export default function MyResults(props) {
   const [inProgress, setInProgress] = useState(null)
   const [tenseRows, setTenseRows] = useState([])
   const [drills, setDrills] = useState([])
+  const [rfResults, setRfResults] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(function () {
@@ -77,12 +78,20 @@ export default function MyResults(props) {
       const drillList = Object.keys(byHw).map(function (k) { return byHw[k] })
       drillList.sort(function (a, b) { return b.homework_id - a.homework_id })
 
+      // Rapid Fire pronunciation results
+      const rfRes = await supabase
+        .from('rapid_fire_transcripts')
+        .select('*, homework_content!inner(homework_id, block, block_title)')
+        .eq('student_id', profile.id)
+        .order('created_at', { ascending: false })
+
       if (alive) {
         setEvals(evRes.data || [])
         setThemes(themeMap)
         setInProgress(progress)
         setTenseRows(aggregateAttempts(vRes.data || []))
         setDrills(drillList)
+        setRfResults(rfRes.data || [])
         setLoading(false)
       }
     }
@@ -185,6 +194,68 @@ export default function MyResults(props) {
                 <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
                   {themes[d.homework_id] || ''} · {d.correct}/{d.total} correct · {d.sets} set{d.sets === 1 ? '' : 's'} submitted
                 </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {rfResults.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <h3 style={{ margin: '8px 0 12px' }}>Rapid Fire pronunciation</h3>
+          {rfResults.map(function (r) {
+            const hc = r.homework_content || {}
+            const pct = r.max_score > 0 ? (r.score / r.max_score) * 100 : 0
+            const col = pct >= 80 ? '#157A3D' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
+            const mistakes = r.mistakes || []
+            const isDebate = r.max_score === 20
+            return (
+              <div className="card" key={r.id} style={{ marginBottom: 12 }}>
+                <div className="block-title" style={{ justifyContent: 'space-between' }}>
+                  <span>
+                    Week {hc.homework_id} — {hc.block_title || 'Rapid Fire (Block ' + hc.block + ')'}
+                    {r.cycle_number > 1 ? ' (cycle ' + r.cycle_number + ')' : ''}
+                  </span>
+                  {r.score != null && (
+                    <span style={{ fontSize: 15, fontWeight: 800, color: col }}>
+                      {r.score} / {r.max_score}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
+                  {themes[hc.homework_id] || ''} · {new Date(r.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' · '}{mistakes.length} mistake{mistakes.length === 1 ? '' : 's'}
+                </div>
+                {mistakes.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                    {mistakes.map(function (m, i) {
+                      return (
+                        <span key={i} style={{
+                          fontSize: 12, fontWeight: 600, padding: '3px 10px',
+                          borderRadius: 999, background: '#FDEBEC', color: 'var(--red)'
+                        }}>
+                          {isDebate
+                            ? (m.expected || '') + (m.heard ? ' — heard: ' + m.heard : '')
+                            : 'Sentence ' + m.n + (m.issue ? ': ' + m.issue : '')}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                {r.ai_note && (
+                  <div style={{
+                    background: 'var(--primary-soft)', borderRadius: 10,
+                    padding: '12px 16px', fontSize: 14, marginBottom: 8
+                  }}>
+                    {r.ai_note}
+                  </div>
+                )}
+                {r.transcript && (
+                  <details className="rf-transcript">
+                    <summary>What the AI heard</summary>
+                    <p>{r.transcript}</p>
+                  </details>
+                )}
               </div>
             )
           })}

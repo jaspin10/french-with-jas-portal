@@ -54,7 +54,7 @@ export default async function handler(req, res) {
   
     try {
       const r = await fetch(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + key,
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + key,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -74,13 +74,14 @@ export default async function handler(req, res) {
         data.candidates[0].content.parts[0] &&
         data.candidates[0].content.parts[0].text
       if (!text) {
-        res.status(502).json({ error: 'No response from model' })
+        const detail = data && data.error ? data.error.message : JSON.stringify(data).slice(0, 300)
+        res.status(502).json({ error: 'No response from model', detail: detail })
         return
       }
       const clean = text.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(clean)
       res.status(200).json(parsed)
     } catch (err) {
-      res.status(502).json({ error: 'Grading failed' })
+      res.status(502).json({ error: 'Grading failed', detail: String(err).slice(0, 300) })
     }
   }

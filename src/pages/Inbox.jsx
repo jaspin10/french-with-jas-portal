@@ -5,6 +5,7 @@ export default function Inbox() {
   const [subs, setSubs] = useState([])
   const [students, setStudents] = useState([])
   const [rfAttempts, setRfAttempts] = useState([])
+  const [rfTranscripts, setRfTranscripts] = useState([])
   const [idbAttempts, setIdbAttempts] = useState([])
   const [ptAttempts, setPtAttempts] = useState([])
   const [filter, setFilter] = useState('all')
@@ -21,6 +22,9 @@ export default function Inbox() {
     const rfRes = await supabase
       .from('rapid_fire_attempts')
       .select('student_id, content_id, cycle_number, attempt_no, accepted')
+    const rftRes = await supabase
+      .from('rapid_fire_transcripts')
+      .select('*')
     const idbRes = await supabase
       .from('image_describe_attempts')
       .select('student_id, content_id, step_no, cycle_number, accepted')
@@ -30,6 +34,7 @@ export default function Inbox() {
     setSubs(sRes.data || [])
     setStudents(pRes.data || [])
     setRfAttempts(rfRes.data || [])
+    setRfTranscripts(rftRes.data || [])
     setIdbAttempts(idbRes.data || [])
     setPtAttempts(ptRes.data || [])
     setLoading(false)
@@ -57,9 +62,15 @@ export default function Inbox() {
         a.content_id === contentId &&
         a.cycle_number === cycle - 1
     })
+    const transcript = rfTranscripts.find(function (t) {
+      return t.student_id === sub.student_id &&
+        t.content_id === contentId &&
+        t.cycle_number === cycle
+    }) || null
     return {
       tries: cur.length,
-      prevTries: prev.length > 0 ? prev.length : null
+      prevTries: prev.length > 0 ? prev.length : null,
+      transcript: transcript
     }
   }
 
@@ -239,6 +250,11 @@ export default function Inbox() {
           const rf = rapidFireInfo(sub)
           const idb = imageDescribeInfo(sub)
           const pt = processInfo(sub)
+          const tr = rf ? rf.transcript : null
+          const trPct = tr && tr.max_score > 0 ? (tr.score / tr.max_score) * 100 : 0
+          const trCol = trPct >= 80 ? '#157A3D' : trPct >= 50 ? 'var(--amber)' : 'var(--red)'
+          const trIsDebate = tr ? tr.max_score === 20 : false
+          const trMistakes = tr ? (tr.mistakes || []) : []
           return (
             <div key={sub.id} style={{ padding: '16px 0', borderBottom: '1px solid #F0F1F6' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
@@ -259,6 +275,11 @@ export default function Inbox() {
                       <div style={{ fontSize: 13, color: 'var(--primary)', fontWeight: 600 }}>
                         Rapid Fire · accepted in {rf.tries} {rf.tries === 1 ? 'try' : 'tries'}
                         {rf.prevTries !== null ? ' · last cycle: ' + rf.prevTries : ''}
+                        {tr && tr.score != null && (
+                          <span style={{ color: trCol }}>
+                            {' · pronunciation '}{tr.score}/{tr.max_score}
+                          </span>
+                        )}
                       </div>
                     )}
                     {idb && (
@@ -300,6 +321,38 @@ export default function Inbox() {
                   </button>
                 </div>
               </div>
+
+              {tr && (
+                <div style={{ marginTop: 10 }}>
+                  {trMistakes.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+                      {trMistakes.map(function (m, i) {
+                        return (
+                          <span key={i} style={{
+                            fontSize: 12, fontWeight: 600, padding: '3px 10px',
+                            borderRadius: 999, background: '#FDEBEC', color: 'var(--red)'
+                          }}>
+                            {trIsDebate
+                              ? (m.expected || '') + (m.heard ? ' — heard: ' + m.heard : '')
+                              : 'Sentence ' + m.n + (m.issue ? ': ' + m.issue : '')}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {tr.ai_note && (
+                    <div style={{ fontSize: 13, color: 'var(--primary)', marginBottom: 6 }}>
+                      {tr.ai_note}
+                    </div>
+                  )}
+                  {tr.transcript && (
+                    <details className="rf-transcript">
+                      <summary>What the AI heard</summary>
+                      <p>{tr.transcript}</p>
+                    </details>
+                  )}
+                </div>
+              )}
 
               {sub.feedback && editingId !== sub.id && (
                 <div style={{ marginTop: 10, padding: '10px 14px', borderRadius: 10, background: 'var(--primary-soft)', color: 'var(--primary)', fontSize: 13 }}>
@@ -349,4 +402,3 @@ export default function Inbox() {
     </div>
   )
 }
-

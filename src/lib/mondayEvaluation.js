@@ -2,7 +2,8 @@ import { supabase } from './supabase'
 
 // Called after each graded ladder item. If ALL Monday ladder items for the
 // current cycle are done and no evaluation row exists yet, computes the
-// weekly score + mistake tally, asks the AI for the analysis, and stores it.
+// weekly score + mistake tally, asks the AI for the analysis (including
+// week-over-week progress vs previous evaluations), and stores it.
 export async function maybeCreateMondayEvaluation(profileId) {
   const cyc = await supabase.from('global_cycle').select('*').eq('id', 1).maybeSingle()
   if (!cyc.data) return
@@ -65,6 +66,27 @@ export async function maybeCreateMondayEvaluation(profileId) {
   })
   const score = Math.round(sum / attempts.length)
 
+  // Previous evaluations for week-over-week progress (most recent 4)
+  let previous = []
+  try {
+    const prev = await supabase
+      .from('monday_evaluations')
+      .select('homework_id, cycle_number, score, mistake_counts, created_at')
+      .eq('student_id', profileId)
+      .order('created_at', { ascending: false })
+      .limit(4)
+    previous = (prev.data || []).map(function (p) {
+      return {
+        homework_id: p.homework_id,
+        cycle_number: p.cycle_number,
+        score: p.score,
+        mistake_counts: p.mistake_counts || {}
+      }
+    })
+  } catch (err) {
+    previous = []
+  }
+
   // Ask the AI for the weekly analysis (best-effort)
   let analysis = null
   try {
@@ -75,7 +97,8 @@ export async function maybeCreateMondayEvaluation(profileId) {
         mode: 'analysis',
         mistake_counts: counts,
         score: score,
-        examples: examples
+        examples: examples,
+        previous: previous
       })
     })
     if (r.ok) {

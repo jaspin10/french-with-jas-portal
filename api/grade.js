@@ -23,6 +23,7 @@ export default async function handler(req, res) {
       const counts = body.mistake_counts || {}
       const score = typeof body.score === 'number' ? body.score : null
       const examples = (body.examples || []).slice(0, 20)
+      const previous = (body.previous || []).slice(0, 4)
       let summary = ''
       Object.keys(counts).forEach(function (k) {
         summary += k + ': ' + counts[k] + '\n'
@@ -33,12 +34,27 @@ export default async function handler(req, res) {
           ' | Student: ' + String(ex.answer || '').slice(0, 200) +
           ' | Correct: ' + String(ex.model || '').slice(0, 200) + '\n'
       })
+      let historyText = ''
+      previous.forEach(function (p, i) {
+        let pc = ''
+        const pcounts = p.mistake_counts || {}
+        Object.keys(pcounts).forEach(function (k) {
+          pc += (pc ? ', ' : '') + k + ': ' + pcounts[k]
+        })
+        historyText += '- ' + (i + 1) + ' week(s) ago: score ' +
+          (typeof p.score === 'number' ? p.score : '?') + '/100, mistakes: ' +
+          (pc || 'none') + '\n'
+      })
       prompt = 'You are a supportive French teacher writing a short weekly progress analysis for an immigrant learner in Canada (CLB 5-8) who just finished their Monday translation homework.\n\n' +
         'Mistake counts by category this week:\n' + (summary || 'none - perfect week') + '\n' +
         (score != null ? 'Overall score: ' + score + '/100\n' : '') +
+        (historyText ? '\nPrevious weeks (most recent first):\n' + historyText : '') +
         (exampleText ? '\nSample errors (English prompt | student answer | correct answer):\n' + exampleText : '') + '\n' +
-        'Write 3-5 short sentences in simple English (with French grammar terms where useful):\n' +
-        '- Identify the 1-2 mistake categories that come up most and explain the likely root cause (e.g. adjective agreement, forgetting final punctuation, anglicisms).\n' +
+        'Write 3-6 short sentences in simple English (with French grammar terms where useful):\n' +
+        '- Identify the 1-2 mistake categories that come up most this week and explain the likely root cause (e.g. adjective agreement, forgetting final punctuation, anglicisms).\n' +
+        (historyText
+          ? '- Compare with the previous weeks: mention concretely which categories improved or got worse and whether the score is trending up or down (e.g. "accents dropped from 8 to 3 - good progress"). If this is clearly better or worse than last week, say so plainly.\n'
+          : '') +
         '- Give one concrete, specific thing to practice this week to fix the biggest weakness.\n' +
         '- End with one short encouraging sentence.\n' +
         'If there are no mistakes, congratulate them briefly and suggest what to aim for next.\n\n' +

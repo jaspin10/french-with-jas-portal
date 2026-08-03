@@ -111,9 +111,9 @@ export default function MondayStatsCard(props) {
           No graded Monday work yet.
         </div>
       ) : (
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 110, marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, height: 130, paddingTop: 8, marginBottom: 16 }}>
           {bars.map(function (b, i) {
-            const h = Math.max(8, Math.round((b.mistakes / maxMistakes) * 90))
+            const h = Math.max(8, Math.round((b.mistakes / maxMistakes) * 80))
             return (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flex: '0 0 44px' }}>
                 <div style={{ fontSize: 12, fontWeight: 700 }}>{b.mistakes}</div>

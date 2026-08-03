@@ -854,3 +854,57 @@ body {
   font-weight: 700;
   color: #6C5CE7;
 }
+
+/* Rapid Fire pronunciation result */
+.rf-checking {
+  margin-top: 10px;
+  color: #6C5CE7;
+  font-size: 14px;
+}
+
+.rf-result {
+  margin-top: 14px;
+  padding: 14px;
+  background: #F5F6FA;
+  border-radius: 14px;
+}
+
+.rf-result-score {
+  font-weight: 700;
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.rf-result-mistakes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.rf-mistake-pill {
+  background: #FDECEC;
+  color: #C0392B;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.rf-result-note {
+  color: #6C5CE7;
+  font-size: 14px;
+  margin: 6px 0;
+}
+
+.rf-transcript summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: #666;
+}
+
+.rf-transcript p {
+  font-size: 13px;
+  color: #444;
+  margin-top: 6px;
+}

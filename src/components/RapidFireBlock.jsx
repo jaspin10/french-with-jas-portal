@@ -4,9 +4,8 @@ import { supabase } from '../lib/supabase';
 export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumber }) {
   const extra = item.extra || {};
   const items = extra.items || [];
-  const limit = extra.time_limit_seconds || 60;
 
-  const [mode, setMode] = useState('practice'); // practice | record
+  const [mode, setMode] = useState('practice');
   const [recording, setRecording] = useState(false);
   const [blobUrl, setBlobUrl] = useState(null);
   const [blob, setBlob] = useState(null);
@@ -16,29 +15,65 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [threshold, setThreshold] = useState(null); // null = first cycle for this block type
+  const [result, setResult] = useState(null); // saved transcript row
+  const [checking, setChecking] = useState(false);
 
   const mediaRef = useRef(null);
   const chunksRef = useRef([]);
   const startRef = useRef(0);
+
+  const isDebate = items.length === 1;
+  const maxScore = isDebate ? 20 : 16;
 
   useEffect(function () {
     let alive = true;
     async function load() {
       const { data } = await supabase
         .from('rapid_fire_attempts')
-        .select('cycle_number, attempt_no, accepted')
+        .select('cycle_number, attempt_no, accepted, duration_seconds')
         .eq('student_id', user.id)
         .eq('content_id', item.id);
-      if (!alive || !data) return;
-      const cur = data.filter(function (a) { return a.cycle_number === cycleNumber; });
-      const prev = data.filter(function (a) { return a.cycle_number === cycleNumber - 1; });
+      if (!alive) return;
+      const rows = data || [];
+      const cur = rows.filter(function (a) { return a.cycle_number === cycleNumber; });
+      const prev = rows.filter(function (a) { return a.cycle_number === cycleNumber - 1; });
       setTries(cur.length);
       setPrevTries(prev.length > 0 ? prev.length : null);
       setDone(cur.some(function (a) { return a.accepted; }));
+
+      // Personal threshold: fastest duration from the most recent previous cycle
+      // of this block TYPE (same day+block, different content_id).
+      const { data: hist } = await supabase
+        .from('rapid_fire_attempts')
+        .select('duration_seconds, cycle_number, homework_content!inner(day, block)')
+        .eq('student_id', user.id)
+        .eq('homework_content.day', day)
+        .eq('homework_content.block', item.block)
+        .neq('content_id', item.id)
+        .order('cycle_number', { ascending: false });
+      if (!alive) return;
+      if (hist && hist.length > 0) {
+        const lastCycle = hist[0].cycle_number;
+        const lastRows = hist.filter(function (h) { return h.cycle_number === lastCycle; });
+        const best = Math.min.apply(null, lastRows.map(function (h) { return Number(h.duration_seconds); }));
+        setThreshold(best + 5);
+      }
+
+      // Load an existing transcript result if the block is already done
+      const { data: tr } = await supabase
+        .from('rapid_fire_transcripts')
+        .select('*')
+        .eq('student_id', user.id)
+        .eq('content_id', item.id)
+        .eq('cycle_number', cycleNumber)
+        .maybeSingle();
+      if (!alive) return;
+      if (tr) setResult(tr);
     }
     load();
     return function () { alive = false; };
-  }, [item.id, user.id, cycleNumber]);
+  }, [item.id, user.id, cycleNumber, day, item.block]);
 
   async function startRecording() {
     setMsg('');
@@ -76,11 +111,63 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
     setMsg('');
   }
 
+  function blobToBase64(b) {
+    return new Promise(function (resolve, reject) {
+      const r = new FileReader();
+      r.onload = function () { resolve(r.result.split(',')[1]); };
+      r.onerror = function () { reject(new Error('read failed')); };
+      r.readAsDataURL(b);
+    });
+  }
+
+  async function runTranscription(sentBlob) {
+    setChecking(true);
+    try {
+      const b64 = await blobToBase64(sentBlob);
+      const payload = isDebate
+        ? { audio_base64: b64, mime_type: 'audio/webm', mode: 'debate', text: items[0].fr }
+        : {
+            audio_base64: b64,
+            mime_type: 'audio/webm',
+            mode: 'list',
+            items: items.map(function (it) { return it.fr; })
+          };
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error('transcribe failed');
+      const data = await res.json();
+
+      const row = {
+        student_id: user.id,
+        content_id: item.id,
+        cycle_number: cycleNumber,
+        transcript: data.transcript || '',
+        score: typeof data.score === 'number' ? data.score : null,
+        max_score: maxScore,
+        mistakes: isDebate ? (data.mistakes || []) : (data.results || []).filter(function (r) { return !r.correct; }),
+        ai_note: data.note || ''
+      };
+      const { data: saved } = await supabase
+        .from('rapid_fire_transcripts')
+        .insert(row)
+        .select()
+        .maybeSingle();
+      setResult(saved || row);
+    } catch (err) {
+      // Fail-soft: acceptance already happened; no transcript is shown.
+    }
+    setChecking(false);
+  }
+
   async function send() {
     if (!blob || busy) return;
     setBusy(true);
     const attemptNo = tries + 1;
-    const accepted = duration <= limit;
+    const firstCycle = threshold === null;
+    const accepted = firstCycle ? attemptNo >= 5 : duration <= threshold;
 
     await supabase.from('rapid_fire_attempts').insert({
       student_id: user.id,
@@ -93,7 +180,9 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
     setTries(attemptNo);
 
     if (!accepted) {
-      setMsg('Too long — try again.');
+      setMsg(firstCycle
+        ? 'Recorded (' + fmt(duration) + '). Attempt ' + attemptNo + ' of 5 — your 5th recording will be submitted.'
+        : 'Too long — try again.');
       setBlob(null);
       setBlobUrl(null);
       setBusy(false);
@@ -119,15 +208,24 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
       storage_path: path
     });
 
+    const sentBlob = blob;
     setDone(true);
     setMsg('Accepted. Homework complete.');
     setBlob(null);
     setBlobUrl(null);
     setBusy(false);
+
+    runTranscription(sentBlob);
   }
 
   function showPractice() { setMode('practice'); }
   function showRecord() { setMode('record'); }
+
+  function fmt(s) {
+    const m = Math.floor(s / 60);
+    const sec = Math.round(s % 60);
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
 
   return (
     <div className="card">
@@ -137,6 +235,8 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
       <div className="rf-meta">
         <span>Tries this week: {tries}</span>
         {prevTries !== null && <span> · Last cycle: {prevTries} tries</span>}
+        {threshold !== null && !done && <span> · Target: under {fmt(threshold)}</span>}
+        {threshold === null && !done && <span> · First week: attempt {Math.min(tries + 1, 5)} of 5, the 5th is submitted</span>}
         {done && <span className="pill"> Completed</span>}
       </div>
 
@@ -188,6 +288,36 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
             </div>
           )}
           {msg && <p style={{ marginTop: 8 }}>{msg}</p>}
+        </div>
+      )}
+
+      {checking && <p className="rf-checking">Checking your pronunciation...</p>}
+
+      {result && (
+        <div className="rf-result">
+          <div className="rf-result-score">
+            Pronunciation: {result.score} / {result.max_score}
+          </div>
+          {result.mistakes && result.mistakes.length > 0 && (
+            <div className="rf-result-mistakes">
+              {result.mistakes.map(function (m, i) {
+                return (
+                  <span className="rf-mistake-pill" key={i}>
+                    {isDebate
+                      ? (m.expected || '') + (m.heard ? ' — heard: ' + m.heard : '')
+                      : 'Sentence ' + m.n + (m.issue ? ': ' + m.issue : '')}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+          {result.ai_note && <p className="rf-result-note">{result.ai_note}</p>}
+          {result.transcript && (
+            <details className="rf-transcript">
+              <summary>What the AI heard</summary>
+              <p>{result.transcript}</p>
+            </details>
+          )}
         </div>
       )}
     </div>

@@ -10,12 +10,30 @@ function normalize(s) {
     .replace(/\s+/g, ' ')
 }
 
+const MISTAKE_LABELS = {
+  word_order: 'Word order',
+  spelling: 'Spelling',
+  accents: 'Accents',
+  punctuation: 'Punctuation',
+  capitalization: 'Capitalization',
+  tense: 'Tense',
+  conjugation: 'Conjugation',
+  agreement: 'Agreement',
+  article: 'Article',
+  preposition: 'Preposition',
+  vocabulary: 'Vocabulary',
+  missing_words: 'Missing words',
+  extra_words: 'Extra words',
+  elision: 'Elision'
+}
+
 export default function LadderBlock(props) {
   const items = props.items
   const profile = props.profile
 
   const [drafts, setDrafts] = useState({})
   const [attempts, setAttempts] = useState({})
+  const [grading, setGrading] = useState({})
   const [loading, setLoading] = useState(true)
 
   const solveItems = items.filter(function (i) { return i.item_type === 'solve' })
@@ -44,23 +62,85 @@ export default function LadderBlock(props) {
     setDrafts(next)
   }
 
+  function setGradingFlag(id, value) {
+    setGrading(function (prev) {
+      const next = {}
+      Object.keys(prev).forEach(function (k) { next[k] = prev[k] })
+      next[id] = value
+      return next
+    })
+  }
+
+  function isParagraph(item) {
+    return (item.prompt || '').length > 200
+  }
+
   async function submitItem(item) {
     const answer = (drafts[item.id] || '').trim()
     if (!answer) {
       alert('Write your answer first.')
       return
     }
-    const correct = normalize(answer) === normalize(item.correction)
+
+    setGradingFlag(item.id, true)
+
+    const row = {
+      student_id: profile.id,
+      content_id: item.id,
+      answer: answer,
+      is_correct: false,
+      graded_by: 'strict',
+      mistakes: null,
+      ai_score: null,
+      ai_feedback: null
+    }
+
+    let usedAI = false
+    try {
+      const mode = isParagraph(item) ? 'paragraph' : 'sentence'
+      const r = await fetch('/api/grade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: mode,
+          english: item.prompt,
+          model: item.correction,
+          answer: answer
+        })
+      })
+      if (r.ok) {
+        const g = await r.json()
+        if (mode === 'sentence' && typeof g.correct === 'boolean') {
+          row.is_correct = g.correct
+          row.mistakes = g.mistakes && g.mistakes.length > 0 ? g.mistakes : null
+          row.ai_feedback = g.note || null
+          row.graded_by = 'ai'
+          usedAI = true
+        } else if (mode === 'paragraph' && typeof g.score === 'number') {
+          row.ai_score = Math.max(0, Math.min(100, Math.round(g.score)))
+          row.is_correct = row.ai_score >= 80
+          row.mistakes = g.mistakes && g.mistakes.length > 0 ? g.mistakes : null
+          row.ai_feedback = (g.note || '') + (g.corrected ? '\n\nCorrection :\n' + g.corrected : '')
+          row.graded_by = 'ai'
+          usedAI = true
+        }
+      }
+    } catch (err) {
+      usedAI = false
+    }
+
+    if (!usedAI) {
+      row.is_correct = normalize(answer) === normalize(item.correction)
+    }
+
     const res = await supabase
       .from('item_attempts')
-      .insert({
-        student_id: profile.id,
-        content_id: item.id,
-        answer: answer,
-        is_correct: correct
-      })
+      .insert(row)
       .select()
       .maybeSingle()
+
+    setGradingFlag(item.id, false)
+
     if (res.error) {
       alert('Could not submit: ' + res.error.message)
       return
@@ -69,6 +149,8 @@ export default function LadderBlock(props) {
     Object.keys(attempts).forEach(function (k) { next[k] = attempts[k] })
     next[item.id] = res.data
     setAttempts(next)
+
+    if (props.onItemGraded) props.onItemGraded()
   }
 
   if (loading) return <div style={{ color: 'var(--text-muted)', fontSize: 14 }}>Loading...</div>
@@ -95,7 +177,8 @@ export default function LadderBlock(props) {
       {solveItems.map(function (item, idx) {
         const attempt = attempts[item.id]
         const done = attempt != null
-        const isLong = (item.prompt || '').length > 200
+        const busy = grading[item.id] === true
+        const para = isParagraph(item)
         return (
           <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #F0F1F6' }}>
             <div style={{ fontSize: 14, marginBottom: 8, whiteSpace: 'pre-line' }}>
@@ -107,27 +190,64 @@ export default function LadderBlock(props) {
                 className="solve-input"
                 style={{
                   flex: '1 1 300px',
-                  minHeight: isLong ? 160 : 40,
+                  minHeight: para ? 160 : 40,
                   padding: '8px 12px',
                   borderColor: done ? (attempt.is_correct ? 'var(--green)' : 'var(--red)') : undefined,
                   background: done ? '#fff' : undefined
                 }}
                 value={done ? attempt.answer : (drafts[item.id] || '')}
-                disabled={done}
+                disabled={done || busy}
                 onChange={function (e) { setDraft(item.id, e.target.value) }}
               />
               {!done && (
-                <button className="reveal-btn" style={{ marginTop: 0 }} onClick={function () { submitItem(item) }}>
-                  Submit
+                <button
+                  className="reveal-btn"
+                  style={{ marginTop: 0 }}
+                  disabled={busy}
+                  onClick={function () { submitItem(item) }}
+                >
+                  {busy ? 'Checking...' : 'Submit'}
                 </button>
               )}
             </div>
             {done && (
-              <div style={{
-                marginTop: 8, fontSize: 13.5, fontWeight: 600, whiteSpace: 'pre-line',
-                color: attempt.is_correct ? '#157A3D' : 'var(--primary)'
-              }}>
-                {item.correction}
+              <div style={{ marginTop: 8 }}>
+                {attempt.ai_score != null && (
+                  <div style={{
+                    fontSize: 14, fontWeight: 700, marginBottom: 6,
+                    color: attempt.is_correct ? '#157A3D' : 'var(--red)'
+                  }}>
+                    Score: {attempt.ai_score} / 100
+                  </div>
+                )}
+                {attempt.mistakes && attempt.mistakes.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                    {attempt.mistakes.map(function (m, mi) {
+                      return (
+                        <span key={mi} style={{
+                          fontSize: 12, fontWeight: 600, padding: '3px 10px',
+                          borderRadius: 999, background: '#FDEBEC', color: 'var(--red)'
+                        }}>
+                          {MISTAKE_LABELS[m] || m}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                {attempt.ai_feedback && (
+                  <div style={{
+                    fontSize: 13.5, color: 'var(--text-muted)',
+                    whiteSpace: 'pre-line', marginBottom: 6
+                  }}>
+                    {attempt.ai_feedback}
+                  </div>
+                )}
+                <div style={{
+                  fontSize: 13.5, fontWeight: 600, whiteSpace: 'pre-line',
+                  color: attempt.is_correct ? '#157A3D' : 'var(--primary)'
+                }}>
+                  {attempt.correction != null ? attempt.correction : item.correction}
+                </div>
               </div>
             )}
           </div>

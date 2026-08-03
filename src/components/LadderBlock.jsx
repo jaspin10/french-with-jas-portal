@@ -95,9 +95,10 @@ export default function LadderBlock(props) {
       {solveItems.map(function (item, idx) {
         const attempt = attempts[item.id]
         const done = attempt != null
+        const isLong = (item.prompt || '').length > 200
         return (
           <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #F0F1F6' }}>
-            <div style={{ fontSize: 14, marginBottom: 8 }}>
+            <div style={{ fontSize: 14, marginBottom: 8, whiteSpace: 'pre-line' }}>
               <span style={{ color: 'var(--text-muted)', marginRight: 6 }}>{idx + 1}.</span>
               {item.prompt.replace('Traduis : ', '')}
             </div>
@@ -105,7 +106,9 @@ export default function LadderBlock(props) {
               <textarea
                 className="solve-input"
                 style={{
-                  flex: '1 1 300px', minHeight: 40, padding: '8px 12px',
+                  flex: '1 1 300px',
+                  minHeight: isLong ? 160 : 40,
+                  padding: '8px 12px',
                   borderColor: done ? (attempt.is_correct ? 'var(--green)' : 'var(--red)') : undefined,
                   background: done ? '#fff' : undefined
                 }}
@@ -121,7 +124,7 @@ export default function LadderBlock(props) {
             </div>
             {done && (
               <div style={{
-                marginTop: 8, fontSize: 13.5, fontWeight: 600,
+                marginTop: 8, fontSize: 13.5, fontWeight: 600, whiteSpace: 'pre-line',
                 color: attempt.is_correct ? '#157A3D' : 'var(--primary)'
               }}>
                 {item.correction}

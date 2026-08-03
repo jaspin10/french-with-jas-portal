@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { aggregateAttempts, TenseMasteryList } from './MyTenses'
 
 const MISTAKE_LABELS = {
   word_order: 'Word order',
@@ -23,6 +24,8 @@ export default function MyResults(props) {
   const [evals, setEvals] = useState([])
   const [themes, setThemes] = useState({})
   const [inProgress, setInProgress] = useState(null)
+  const [tenseRows, setTenseRows] = useState([])
+  const [drills, setDrills] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(function () {
@@ -38,7 +41,6 @@ export default function MyResults(props) {
       const themeMap = {}
       ;(hwRes.data || []).forEach(function (h) { themeMap[h.id] = h.theme })
 
-      // Is the current week's Monday still in progress (no eval row yet)?
       const cyc = await supabase.from('global_cycle').select('*').eq('id', 1).maybeSingle()
       let progress = null
       if (cyc.data) {
@@ -50,10 +52,37 @@ export default function MyResults(props) {
         if (!hasEval) progress = { hwId: hwId }
       }
 
+      // Tense mastery (was My Tenses)
+      const vRes = await supabase
+        .from('verb_attempts')
+        .select('tense, correct_count, total')
+        .eq('student_id', profile.id)
+
+      // Block 2 drill scores (auto-scored, not AI-graded)
+      const dRes = await supabase
+        .from('drill_attempts')
+        .select('homework_id, day, block, correct_count, total')
+        .eq('student_id', profile.id)
+
+      const byHw = {}
+      ;(dRes.data || []).forEach(function (r) {
+        const key = r.homework_id + '_' + r.day + '_' + r.block
+        if (!byHw[key]) {
+          byHw[key] = { homework_id: r.homework_id, day: r.day, block: r.block, correct: 0, total: 0, sets: 0 }
+        }
+        byHw[key].correct += r.correct_count
+        byHw[key].total += r.total
+        byHw[key].sets += 1
+      })
+      const drillList = Object.keys(byHw).map(function (k) { return byHw[k] })
+      drillList.sort(function (a, b) { return b.homework_id - a.homework_id })
+
       if (alive) {
         setEvals(evRes.data || [])
         setThemes(themeMap)
         setInProgress(progress)
+        setTenseRows(aggregateAttempts(vRes.data || []))
+        setDrills(drillList)
         setLoading(false)
       }
     }
@@ -79,7 +108,7 @@ export default function MyResults(props) {
       )}
 
       {evals.length === 0 && !inProgress && (
-        <div className="card">
+        <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>
             No evaluations yet. Complete a Monday homework to see your first result.
           </div>
@@ -136,6 +165,34 @@ export default function MyResults(props) {
           </div>
         )
       })}
+
+      {drills.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <h3 style={{ margin: '8px 0 12px' }}>Translation drills</h3>
+          {drills.map(function (d) {
+            const pct = d.total > 0 ? Math.round((d.correct / d.total) * 100) : 0
+            const col = pct >= 80 ? '#157A3D' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
+            return (
+              <div className="card" key={d.homework_id + '_' + d.day + '_' + d.block} style={{ marginBottom: 12 }}>
+                <div className="block-title" style={{ justifyContent: 'space-between' }}>
+                  <span>
+                    Week {d.homework_id} — {d.day.charAt(0).toUpperCase() + d.day.slice(1)} drill (Block {d.block})
+                  </span>
+                  <span style={{ fontSize: 15, fontWeight: 800, color: col }}>
+                    {pct}%
+                  </span>
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                  {themes[d.homework_id] || ''} · {d.correct}/{d.total} correct · {d.sets} set{d.sets === 1 ? '' : 's'} submitted
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <h3 style={{ margin: '8px 0 12px' }}>Tense mastery</h3>
+      <TenseMasteryList rows={tenseRows} />
     </div>
   )
 }

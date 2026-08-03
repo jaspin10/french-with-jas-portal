@@ -10,7 +10,6 @@ import Submissions from './pages/Submissions'
 import Dashboard from './pages/Dashboard'
 import HomeworkManager from './pages/HomeworkManager'
 import Inbox from './pages/Inbox'
-import MyTenses from './pages/MyTenses'
 import ClassPage from './pages/ClassPage'
 import RecordingsManager from './pages/RecordingsManager'
 import MyResults from './pages/MyResults'
@@ -70,7 +69,6 @@ export default function App() {
               <Route path="/homework" element={<Homework profile={profile} />} />
               <Route path="/submissions" element={<Submissions profile={profile} />} />
               <Route path="/results" element={<MyResults profile={profile} />} />
-              <Route path="/my-tenses" element={<MyTenses profile={profile} />} />
               <Route path="/class" element={<ClassPage profile={profile} />} />
             </>
           )}

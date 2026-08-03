@@ -10,6 +10,7 @@ import RapidFireBlock from '../components/RapidFireBlock'
 import ImageDescribeBlock from '../components/ImageDescribeBlock'
 import ProcessTellingBlock from '../components/ProcessTellingBlock'
 import StoryTellingBlock from '../components/StoryTellingBlock'
+import { maybeCreateMondayEvaluation } from '../lib/mondayEvaluation'
 
 const DAYS = [
   { key: 'monday', label: 'Monday' },
@@ -322,6 +323,7 @@ export default function Homework(props) {
                 <LadderBlock
                   items={visibleItems}
                   profile={profile}
+                  onItemGraded={function () { maybeCreateMondayEvaluation(profile.id) }}
                 />
               ) : isDrill ? (
                 <DrillBlock

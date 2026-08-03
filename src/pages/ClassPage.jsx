@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 export default function ClassPage({ profile }) {
-  const [link, setLink] = useState(null);
+  const [links, setLinks] = useState([]);
   const [recordings, setRecordings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -13,8 +13,7 @@ export default function ClassPage({ profile }) {
       const { data: linkRows } = await supabase
         .from('class_links')
         .select('*')
-        .eq('level', profile.level)
-        .limit(1);
+        .order('level', { ascending: true });
 
       const { data: recRows } = await supabase
         .from('recordings')
@@ -23,7 +22,7 @@ export default function ClassPage({ profile }) {
         .order('recorded_on', { ascending: false });
 
       if (!active) return;
-      setLink(linkRows && linkRows.length > 0 ? linkRows[0] : null);
+      setLinks(linkRows || []);
       setRecordings(recRows || []);
       setLoading(false);
     }
@@ -32,8 +31,8 @@ export default function ClassPage({ profile }) {
     return function () { active = false; };
   }, [profile.level]);
 
-  function openMeet() {
-    if (link) window.open(link.meet_url, '_blank');
+  function openMeet(url) {
+    window.open(url, '_blank');
   }
 
   if (loading) {
@@ -42,29 +41,34 @@ export default function ClassPage({ profile }) {
 
   return (
     <div>
-      <div className="card">
-        <div className="block-title">Live class</div>
-        {link ? (
-          <div>
-            <button className="sub-btn" onClick={openMeet}>
-              Join Google Meet
-            </button>
-            <div className="cl-timetable">
-              {(link.sessions || []).map(function (s, i) {
-                return (
-                  <div className="cl-session" key={i}>
-                    <div className="cl-session-label">{s.label}</div>
-                    <div className="cl-session-time">{s.days} - {s.time}</div>
-                  </div>
-                );
-              })}
+      {links.length === 0 ? (
+        <div className="card">No class links are set yet.</div>
+      ) : (
+        links.map(function (l) {
+          return (
+            <div className="card" key={l.id}>
+              <div className="block-title">Level {l.level} live class</div>
+              <button
+                className="sub-btn"
+                onClick={function () { openMeet(l.meet_url); }}
+              >
+                Join Google Meet
+              </button>
+              <div className="cl-timetable">
+                {(l.sessions || []).map(function (s, i) {
+                  return (
+                    <div className="cl-session" key={i}>
+                      <div className="cl-session-label">{s.label}</div>
+                      <div className="cl-session-time">{s.days} - {s.time}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="cl-tz">All times in Vancouver time (America/Vancouver)</div>
             </div>
-            <div className="cl-tz">All times in Vancouver time (America/Vancouver)</div>
-          </div>
-        ) : (
-          <div>No class link is set for your level yet.</div>
-        )}
-      </div>
+          );
+        })
+      )}
 
       <div className="card">
         <div className="block-title">Class recordings</div>

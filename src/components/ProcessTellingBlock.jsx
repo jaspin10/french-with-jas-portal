@@ -17,6 +17,7 @@ export default function ProcessTellingBlock(props) {
   const extra = item.extra || {};
   const mode = extra.mode || 'step_by_step';
   const steps = extra.steps || [];
+  const hideSteps = extra.hide_steps === true;
   const isStepMode = mode === 'step_by_step';
 
   const [activeStep, setActiveStep] = useState(1);
@@ -192,11 +193,13 @@ export default function ProcessTellingBlock(props) {
       <div className="block-title">{item.block_title || 'Process telling'}</div>
       <p className="rf-meta">{item.prompt}</p>
 
-      <ol className="pt-steps">
-        {steps.map(function (s, i) {
-          return <li key={i}>{s}</li>;
-        })}
-      </ol>
+      {!hideSteps && (
+        <ol className="pt-steps">
+          {steps.map(function (s, i) {
+            return <li key={i}>{s}</li>;
+          })}
+        </ol>
+      )}
 
       {isStepMode && (
         <div className="rf-tabs">

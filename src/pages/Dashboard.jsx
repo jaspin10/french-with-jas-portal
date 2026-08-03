@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import WeeklyProgressCard from '../components/WeeklyProgressCard'
 import MondayStatsCard from '../components/MondayStatsCard'
+import RapidFireProgressCard from '../components/RapidFireProgressCard'
 
 function ymd(date) {
   return date.toISOString().slice(0, 10)
@@ -151,6 +152,10 @@ export default function Dashboard(props) {
         <MondayStatsCard profile={profile} />
       </div>
 
+      <div style={{ marginBottom: 16 }}>
+        <RapidFireProgressCard user={profile} />
+      </div>
+
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="block-title">My exam date</div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -215,4 +220,3 @@ export default function Dashboard(props) {
     </div>
   )
 }
-

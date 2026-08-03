@@ -908,3 +908,57 @@ body {
   color: #444;
   margin-top: 6px;
 }
+
+/* Rapid Fire progress card */
+.rfp-week {
+  margin-bottom: 14px;
+}
+
+.rfp-week-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.rfp-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.rfp-bar-tag {
+  width: 42px;
+  font-size: 12px;
+  color: #666;
+}
+
+.rfp-bar {
+  height: 14px;
+  border-radius: 7px;
+  min-width: 6px;
+}
+
+.rfp-bar-you {
+  background: #6C5CE7;
+}
+
+.rfp-bar-class {
+  background: #B2A9F2;
+}
+
+.rfp-bar-val {
+  font-size: 12px;
+  color: #444;
+}
+
+.rfp-empty {
+  font-size: 14px;
+  color: #666;
+}
+
+.rfp-note {
+  font-size: 12px;
+  color: #888;
+  margin-top: 8px;
+}

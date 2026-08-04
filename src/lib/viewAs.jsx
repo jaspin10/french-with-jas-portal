@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react';
+import { setReadOnlyMode } from './supabase';
 
 const ViewAsContext = createContext({
   viewAs: null,
@@ -6,7 +7,13 @@ const ViewAsContext = createContext({
 });
 
 export function ViewAsProvider(props) {
-  const [viewAs, setViewAs] = useState(null);
+  const [viewAs, setViewAsState] = useState(null);
+
+  function setViewAs(student) {
+    setReadOnlyMode(!!student);
+    setViewAsState(student);
+  }
+
   return (
     <ViewAsContext.Provider value={{ viewAs: viewAs, setViewAs: setViewAs }}>
       {props.children}

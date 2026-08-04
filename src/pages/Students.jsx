@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import StudentTenses from '../components/StudentTenses'
+import { useViewAs } from '../lib/viewAs'
 
 function ymd(date) {
   return date.toISOString().slice(0, 10)
@@ -14,6 +15,7 @@ export default function Students() {
   const [cycle, setCycle] = useState(null)
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
+  const { setViewAs } = useViewAs()
 
   async function load() {
     const sRes = await supabase
@@ -123,12 +125,13 @@ export default function Students() {
               <th style={{ padding: '10px 8px' }}>Last submission</th>
               <th style={{ padding: '10px 8px' }}>Weekend TCF</th>
               <th style={{ padding: '10px 8px' }}>Tenses</th>
+              <th style={{ padding: '10px 8px' }}>Portal</th>
             </tr>
           </thead>
           <tbody>
             {students.length === 0 && (
               <tr>
-                <td colSpan="9" style={{ padding: 20, color: 'var(--text-muted)' }}>
+                <td colSpan="10" style={{ padding: 20, color: 'var(--text-muted)' }}>
                   No students yet.
                 </td>
               </tr>
@@ -211,10 +214,18 @@ export default function Students() {
                       {expandedId === s.id ? 'Hide' : 'View'}
                     </button>
                   </td>
+                  <td style={{ padding: '10px 8px' }}>
+                    <button
+                      className="reveal-btn"
+                      onClick={function () { setViewAs(s) }}
+                    >
+                      View portal
+                    </button>
+                  </td>
                 </tr>
                 {expandedId === s.id ? (
                   <tr>
-                    <td colSpan="9" style={{ padding: '10px 8px', background: '#FAFAFE' }}>
+                    <td colSpan="10" style={{ padding: '10px 8px', background: '#FAFAFE' }}>
                       <StudentTenses studentId={s.id} />
                     </td>
                   </tr>

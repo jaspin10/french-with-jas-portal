@@ -25,6 +25,7 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
 
   const isDebate = items.length === 1;
   const maxScore = isDebate ? 20 : 16;
+  const minScore = isDebate ? 16 : 10;
 
   useEffect(function () {
     let alive = true;
@@ -120,8 +121,7 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
     });
   }
 
-  async function runTranscription(sentBlob) {
-    setChecking(true);
+  async function transcribe(sentBlob) {
     try {
       const b64 = await blobToBase64(sentBlob);
       const payload = isDebate
@@ -137,37 +137,66 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error('transcribe failed');
+      if (!res.ok) return null;
       const data = await res.json();
-
-      const row = {
-        student_id: user.id,
-        content_id: item.id,
-        cycle_number: cycleNumber,
-        transcript: data.transcript || '',
-        score: typeof data.score === 'number' ? data.score : null,
-        max_score: maxScore,
-        mistakes: isDebate ? (data.mistakes || []) : (data.results || []).filter(function (r) { return !r.correct; }),
-        ai_note: data.note || ''
-      };
-      const { data: saved } = await supabase
-        .from('rapid_fire_transcripts')
-        .insert(row)
-        .select()
-        .maybeSingle();
-      setResult(saved || row);
+      if (typeof data.score !== 'number') return null;
+      return data;
     } catch (err) {
-      // Fail-soft: acceptance already happened; no transcript is shown.
+      return null;
     }
-    setChecking(false);
   }
 
   async function send() {
     if (!blob || busy) return;
     setBusy(true);
+    setMsg('');
     const attemptNo = tries + 1;
     const firstCycle = threshold === null;
-    const accepted = firstCycle ? attemptNo >= 5 : duration <= threshold;
+
+    // Gate 1: time (only after first cycle)
+    if (!firstCycle && duration > threshold) {
+      await supabase.from('rapid_fire_attempts').insert({
+        student_id: user.id,
+        content_id: item.id,
+        cycle_number: cycleNumber,
+        attempt_no: attemptNo,
+        duration_seconds: duration.toFixed(1),
+        accepted: false
+      });
+      setTries(attemptNo);
+      setMsg('Too long — try again.');
+      setBlob(null);
+      setBlobUrl(null);
+      setBusy(false);
+      return;
+    }
+
+    // First cycle: attempts 1-4 are practice sends, not checked
+    if (firstCycle && attemptNo < 5) {
+      await supabase.from('rapid_fire_attempts').insert({
+        student_id: user.id,
+        content_id: item.id,
+        cycle_number: cycleNumber,
+        attempt_no: attemptNo,
+        duration_seconds: duration.toFixed(1),
+        accepted: false
+      });
+      setTries(attemptNo);
+      setMsg('Recorded (' + fmt(duration) + '). Attempt ' + attemptNo + ' of 5 — your 5th recording will be checked and submitted.');
+      setBlob(null);
+      setBlobUrl(null);
+      setBusy(false);
+      return;
+    }
+
+    // Gate 2: pronunciation check before acceptance
+    setChecking(true);
+    setMsg('Checking your pronunciation...');
+    const data = await transcribe(blob);
+    setChecking(false);
+
+    // Fail open: if the AI is unreachable, accept without a score (never block students)
+    const scoreOk = data === null ? true : data.score >= minScore;
 
     await supabase.from('rapid_fire_attempts').insert({
       student_id: user.id,
@@ -175,14 +204,12 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
       cycle_number: cycleNumber,
       attempt_no: attemptNo,
       duration_seconds: duration.toFixed(1),
-      accepted: accepted
+      accepted: scoreOk
     });
     setTries(attemptNo);
 
-    if (!accepted) {
-      setMsg(firstCycle
-        ? 'Recorded (' + fmt(duration) + '). Attempt ' + attemptNo + ' of 5 — your 5th recording will be submitted.'
-        : 'Too long — try again.');
+    if (!scoreOk) {
+      setMsg('Pronunciation score ' + data.score + '/' + maxScore + ' — minimum is ' + minScore + '/' + maxScore + '. Practice and try again.');
       setBlob(null);
       setBlobUrl(null);
       setBusy(false);
@@ -208,14 +235,30 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
       storage_path: path
     });
 
-    const sentBlob = blob;
+    if (data !== null) {
+      const row = {
+        student_id: user.id,
+        content_id: item.id,
+        cycle_number: cycleNumber,
+        transcript: data.transcript || '',
+        score: data.score,
+        max_score: maxScore,
+        mistakes: isDebate ? (data.mistakes || []) : (data.results || []).filter(function (r) { return !r.correct; }),
+        ai_note: data.note || ''
+      };
+      const { data: saved } = await supabase
+        .from('rapid_fire_transcripts')
+        .insert(row)
+        .select()
+        .maybeSingle();
+      setResult(saved || row);
+    }
+
     setDone(true);
     setMsg('Accepted. Homework complete.');
     setBlob(null);
     setBlobUrl(null);
     setBusy(false);
-
-    runTranscription(sentBlob);
   }
 
   function showPractice() { setMode('practice'); }
@@ -235,8 +278,8 @@ export default function RapidFireBlock({ item, user, homeworkId, day, cycleNumbe
       <div className="rf-meta">
         <span>Tries this week: {tries}</span>
         {prevTries !== null && <span> · Last cycle: {prevTries} tries</span>}
-        {threshold !== null && !done && <span> · Target: under {fmt(threshold)}</span>}
-        {threshold === null && !done && <span> · First week: attempt {Math.min(tries + 1, 5)} of 5, the 5th is submitted</span>}
+        {threshold !== null && !done && <span> · Target: under {fmt(threshold)} · minimum score {minScore}/{maxScore}</span>}
+        {threshold === null && !done && <span> · First week: attempt {Math.min(tries + 1, 5)} of 5, the 5th is checked and submitted</span>}
         {done && <span className="pill"> Completed</span>}
       </div>
 

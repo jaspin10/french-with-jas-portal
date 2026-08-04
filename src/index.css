@@ -962,3 +962,154 @@ body {
   color: #888;
   margin-top: 8px;
 }
+
+
+/* ---------- Dark mode ---------- */
+html[data-theme="dark"] {
+  --bg: #14151C;
+  --card: #1E2029;
+  --primary: #8B7CF6;
+  --primary-soft: #2A2740;
+  --text: #E8E9F0;
+  --text-muted: #9A9FB3;
+  --green: #34D399;
+  --green-soft: #10301F;
+  --red: #F87171;
+  --red-soft: #3A1D1D;
+  --amber: #FBBF24;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+html[data-theme="dark"] .sidebar,
+html[data-theme="dark"] .topbar,
+html[data-theme="dark"] .bottom-nav {
+  border-color: #2B2D3A;
+}
+
+html[data-theme="dark"] .solve-row,
+html[data-theme="dark"] .sub-item,
+html[data-theme="dark"] .cl-day-row,
+html[data-theme="dark"] .cl-recording {
+  border-color: #2B2D3A;
+}
+
+html[data-theme="dark"] .solve-input {
+  background: #181A22;
+  border-color: #33364A;
+  color: var(--text);
+}
+
+html[data-theme="dark"] .correction {
+  color: #6EE7A0;
+}
+
+html[data-theme="dark"] .pill.ontime {
+  color: #6EE7A0;
+}
+
+html[data-theme="dark"] .day-tab.active {
+  color: #fff;
+}
+
+html[data-theme="dark"] .timer-progress,
+html[data-theme="dark"] .wp-bar,
+html[data-theme="dark"] .mt-bar {
+  background: #2B2D3A;
+}
+
+html[data-theme="dark"] .vs2-pill {
+  background: var(--card);
+  border-color: #33364A;
+  color: var(--text);
+}
+html[data-theme="dark"] .vs2-pill.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+html[data-theme="dark"] .vs2-input {
+  background: #181A22;
+  border-color: #33364A;
+  color: var(--text);
+}
+html[data-theme="dark"] .vs2-input.correct { background: #10301F; }
+html[data-theme="dark"] .vs2-input.accents { background: #33260D; }
+html[data-theme="dark"] .vs2-input.wrong { background: #3A1D1D; }
+html[data-theme="dark"] .vs2-pronoun,
+html[data-theme="dark"] .vs2-final-score,
+html[data-theme="dark"] .vs2-score-summary,
+html[data-theme="dark"] .vs2-locked-msg {
+  color: var(--text-muted);
+}
+html[data-theme="dark"] .vs2-submit:disabled {
+  background: #2A2740;
+  color: #6B6590;
+}
+
+html[data-theme="dark"] .rf-tabs .pill {
+  background: var(--card);
+  border-color: #33364A;
+  color: var(--text);
+}
+html[data-theme="dark"] .rf-tabs .pill-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+html[data-theme="dark"] .rf-tabs .pill-done {
+  background: #10301F;
+  border-color: var(--green);
+  color: var(--green);
+}
+html[data-theme="dark"] .rf-tabs .pill-active.pill-done {
+  background: var(--green);
+  color: #14151C;
+}
+
+html[data-theme="dark"] .rf-meta,
+html[data-theme="dark"] .rf-transcript summary,
+html[data-theme="dark"] .cl-session-time,
+html[data-theme="dark"] .cl-rec-meta,
+html[data-theme="dark"] .cl-tz,
+html[data-theme="dark"] .st-guide,
+html[data-theme="dark"] .mt-detail,
+html[data-theme="dark"] .rfp-bar-tag,
+html[data-theme="dark"] .rfp-empty,
+html[data-theme="dark"] .rfp-note,
+html[data-theme="dark"] .wp-title,
+html[data-theme="dark"] .wp-meta {
+  color: var(--text-muted);
+}
+
+html[data-theme="dark"] .rf-transcript p,
+html[data-theme="dark"] .rfp-bar-val,
+html[data-theme="dark"] .wp-theme,
+html[data-theme="dark"] .pt-steps {
+  color: var(--text);
+}
+
+html[data-theme="dark"] .cl-session,
+html[data-theme="dark"] .rf-result {
+  background: #181A22;
+}
+
+html[data-theme="dark"] .rf-mistake-pill {
+  background: #3A1D1D;
+  color: #F0908A;
+}
+
+html[data-theme="dark"] .rf-fr,
+html[data-theme="dark"] .rf-result-note,
+html[data-theme="dark"] .rf-checking,
+html[data-theme="dark"] .wp-pct {
+  color: var(--primary);
+}
+
+html[data-theme="dark"] .wp-bar-fill,
+html[data-theme="dark"] .rfp-bar-you {
+  background: var(--primary);
+}
+
+html[data-theme="dark"] .mt-bar {
+  background: #2B2D3A;
+}

@@ -1137,3 +1137,28 @@ html[data-theme="dark"] .solve-input {
   background: #181A22 !important;
   color: var(--text) !important;
 }
+
+.viewas-banner {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  background: var(--primary);
+  color: #FFFFFF;
+  font-size: 14px;
+}
+
+.viewas-exit {
+  background: #FFFFFF;
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+html[data-theme="dark"] .viewas-exit {
+  background: #1E2029;
+  color: #8B7CF6;
+}

@@ -24,6 +24,23 @@ function Placeholder(props) {
   )
 }
 
+function ViewAsBanner(props) {
+  const { setViewAs } = useViewAs()
+  return (
+    <div className="viewas-banner">
+      <span>
+        Viewing as <strong>{props.name}</strong> — read only
+      </span>
+      <button
+        className="reveal-btn viewas-exit"
+        onClick={function () { setViewAs(null) }}
+      >
+        Exit student view
+      </button>
+    </div>
+  )
+}
+
 function AppRoutes(props) {
   const profile = props.profile
   const isTeacher = props.isTeacher
@@ -34,8 +51,16 @@ function AppRoutes(props) {
 
   return (
     <BrowserRouter>
+      {viewing ? <ViewAsBanner name={viewAs.full_name || 'student'} /> : null}
       <Routes>
-        <Route element={<AppShell profile={profile} isTeacher={isTeacher} />}>
+        <Route
+          element={
+            <AppShell
+              profile={effectiveProfile}
+              isTeacher={isTeacher && !viewing}
+            />
+          }
+        >
           {isTeacher && !viewing ? (
             <>
               <Route path="/" element={<Placeholder title="Professor Dashboard" />} />

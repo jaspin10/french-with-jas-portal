@@ -1128,3 +1128,12 @@ html[data-theme="dark"] .mt-bar {
 .theme-toggle:hover {
   color: var(--primary);
 }
+html[data-theme="dark"] .solve-input:disabled,
+html[data-theme="dark"] .solve-input[readonly] {
+  background: #181A22 !important;
+  color: var(--text) !important;
+}
+html[data-theme="dark"] .solve-input {
+  background: #181A22 !important;
+  color: var(--text) !important;
+}

@@ -13,6 +13,7 @@ import Inbox from './pages/Inbox'
 import ClassPage from './pages/ClassPage'
 import RecordingsManager from './pages/RecordingsManager'
 import MyResults from './pages/MyResults'
+import { ViewAsProvider, useViewAs } from './lib/viewAs'
 
 function Placeholder(props) {
   return (
@@ -20,6 +21,42 @@ function Placeholder(props) {
       <h2 style={{ marginBottom: 16 }}>{props.title}</h2>
       <div className="card">Content coming in M1</div>
     </div>
+  )
+}
+
+function AppRoutes(props) {
+  const profile = props.profile
+  const isTeacher = props.isTeacher
+  const { viewAs } = useViewAs()
+
+  const viewing = isTeacher && viewAs
+  const effectiveProfile = viewing ? viewAs : profile
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route element={<AppShell profile={profile} isTeacher={isTeacher} />}>
+          {isTeacher && !viewing ? (
+            <>
+              <Route path="/" element={<Placeholder title="Professor Dashboard" />} />
+              <Route path="/students" element={<Students />} />
+              <Route path="/homework-manager" element={<HomeworkManager />} />
+              <Route path="/inbox" element={<Inbox />} />
+              <Route path="/recordings" element={<RecordingsManager />} />
+            </>
+          ) : (
+            <>
+              <Route path="/" element={<Dashboard profile={effectiveProfile} />} />
+              <Route path="/homework" element={<Homework profile={effectiveProfile} />} />
+              <Route path="/submissions" element={<Submissions profile={effectiveProfile} />} />
+              <Route path="/results" element={<MyResults profile={effectiveProfile} />} />
+              <Route path="/class" element={<ClassPage profile={effectiveProfile} />} />
+            </>
+          )}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    </BrowserRouter>
   )
 }
 
@@ -52,29 +89,8 @@ export default function App() {
   }
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<AppShell profile={profile} isTeacher={isTeacher} />}>
-          {isTeacher ? (
-            <>
-              <Route path="/" element={<Placeholder title="Professor Dashboard" />} />
-              <Route path="/students" element={<Students />} />
-              <Route path="/homework-manager" element={<HomeworkManager />} />
-              <Route path="/inbox" element={<Inbox />} />
-              <Route path="/recordings" element={<RecordingsManager />} />
-            </>
-          ) : (
-            <>
-              <Route path="/" element={<Dashboard profile={profile} />} />
-              <Route path="/homework" element={<Homework profile={profile} />} />
-              <Route path="/submissions" element={<Submissions profile={profile} />} />
-              <Route path="/results" element={<MyResults profile={profile} />} />
-              <Route path="/class" element={<ClassPage profile={profile} />} />
-            </>
-          )}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ViewAsProvider>
+      <AppRoutes profile={profile} isTeacher={isTeacher} />
+    </ViewAsProvider>
   )
 }

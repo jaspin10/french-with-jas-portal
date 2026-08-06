@@ -13,6 +13,8 @@ import Inbox from './pages/Inbox'
 import ClassPage from './pages/ClassPage'
 import RecordingsManager from './pages/RecordingsManager'
 import MyResults from './pages/MyResults'
+import LiveManager from './pages/LiveManager'
+import LivePage from './pages/LivePage'
 import { ViewAsProvider, useViewAs } from './lib/viewAs'
 
 function Placeholder(props) {
@@ -68,6 +70,7 @@ function AppRoutes(props) {
               <Route path="/homework-manager" element={<HomeworkManager />} />
               <Route path="/inbox" element={<Inbox />} />
               <Route path="/recordings" element={<RecordingsManager />} />
+              <Route path="/live-manager" element={<LiveManager />} />
             </>
           ) : (
             <>
@@ -76,6 +79,7 @@ function AppRoutes(props) {
               <Route path="/submissions" element={<Submissions profile={effectiveProfile} />} />
               <Route path="/results" element={<MyResults profile={effectiveProfile} />} />
               <Route path="/class" element={<ClassPage profile={effectiveProfile} />} />
+              <Route path="/live" element={<LivePage profile={effectiveProfile} />} />
             </>
           )}
           <Route path="*" element={<Navigate to="/" replace />} />

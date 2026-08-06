@@ -8,6 +8,7 @@ const studentNav = [
   { to: '/submissions', label: 'Submissions', icon: 'S' },
   { to: '/results', label: 'My Results', icon: 'R' },
   { to: '/class', label: 'Class', icon: 'C' },
+  { to: '/live', label: 'Live', icon: 'L' },
 ]
 
 const teacherNav = [
@@ -16,6 +17,7 @@ const teacherNav = [
   { to: '/homework-manager', label: 'Homework Manager', icon: 'H' },
   { to: '/inbox', label: 'Submissions Inbox', icon: 'I' },
   { to: '/recordings', label: 'Recordings', icon: 'R' },
+  { to: '/live-manager', label: 'Live Class', icon: 'L' },
 ]
 
 function getInitialTheme() {

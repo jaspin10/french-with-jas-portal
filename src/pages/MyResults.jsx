@@ -19,6 +19,10 @@ const MISTAKE_LABELS = {
   elision: 'Elision'
 }
 
+function scoreColor(pct) {
+  return pct >= 80 ? '#157A3D' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
+}
+
 export default function MyResults(props) {
   const profile = props.profile
   const [evals, setEvals] = useState([])
@@ -27,6 +31,7 @@ export default function MyResults(props) {
   const [tenseRows, setTenseRows] = useState([])
   const [drills, setDrills] = useState([])
   const [rfResults, setRfResults] = useState([])
+  const [liveWeeks, setLiveWeeks] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(function () {
@@ -85,6 +90,50 @@ export default function MyResults(props) {
         .eq('student_id', profile.id)
         .order('created_at', { ascending: false })
 
+      // Live Tuesday translation - best attempt per week (homework + cycle)
+      const liveRes = await supabase
+        .from('live_attempts')
+        .select('*, live_activations!inner(cycle_number, activated_at, live_tasks!inner(homework_id, session_label, paragraph))')
+        .eq('student_id', profile.id)
+        .not('locked_at', 'is', null)
+        .order('created_at', { ascending: false })
+
+      const byWeek = {}
+      ;(liveRes.data || []).forEach(function (a) {
+        const act = a.live_activations || {}
+        const task = act.live_tasks || {}
+        const key = task.homework_id + '_c' + act.cycle_number
+        const entry = {
+          id: a.id,
+          homework_id: task.homework_id,
+          cycle_number: act.cycle_number,
+          session_label: task.session_label,
+          score: a.ai_score,
+          feedback: a.ai_feedback,
+          corrected: a.corrected,
+          mistakes: a.mistakes || [],
+          words: a.words_typed,
+          date: act.activated_at,
+          sessions: 1
+        }
+        const existing = byWeek[key]
+        if (!existing) {
+          byWeek[key] = entry
+        } else {
+          existing.sessions += 1
+          const oldScore = existing.score == null ? -1 : existing.score
+          const newScore = entry.score == null ? -1 : entry.score
+          if (newScore > oldScore) {
+            entry.sessions = existing.sessions
+            byWeek[key] = entry
+          }
+        }
+      })
+      const liveList = Object.keys(byWeek).map(function (k) { return byWeek[k] })
+      liveList.sort(function (a, b) {
+        return new Date(b.date).getTime() - new Date(a.date).getTime()
+      })
+
       if (alive) {
         setEvals(evRes.data || [])
         setThemes(themeMap)
@@ -92,6 +141,7 @@ export default function MyResults(props) {
         setTenseRows(aggregateAttempts(vRes.data || []))
         setDrills(drillList)
         setRfResults(rfRes.data || [])
+        setLiveWeeks(liveList)
         setLoading(false)
       }
     }
@@ -100,6 +150,8 @@ export default function MyResults(props) {
   }, [profile.id])
 
   if (loading) return <div className="card">Loading results...</div>
+
+  const liveGraph = liveWeeks.slice().reverse()
 
   return (
     <div>
@@ -139,7 +191,7 @@ export default function MyResults(props) {
               {ev.score != null && (
                 <span style={{
                   fontSize: 15, fontWeight: 800,
-                  color: ev.score >= 80 ? '#157A3D' : ev.score >= 50 ? 'var(--amber)' : 'var(--red)'
+                  color: scoreColor(ev.score)
                 }}>
                   {ev.score} / 100
                 </span>
@@ -180,7 +232,7 @@ export default function MyResults(props) {
           <h3 style={{ margin: '8px 0 12px' }}>Translation drills</h3>
           {drills.map(function (d) {
             const pct = d.total > 0 ? Math.round((d.correct / d.total) * 100) : 0
-            const col = pct >= 80 ? '#157A3D' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
+            const col = scoreColor(pct)
             return (
               <div className="card" key={d.homework_id + '_' + d.day + '_' + d.block} style={{ marginBottom: 12 }}>
                 <div className="block-title" style={{ justifyContent: 'space-between' }}>
@@ -206,7 +258,7 @@ export default function MyResults(props) {
           {rfResults.map(function (r) {
             const hc = r.homework_content || {}
             const pct = r.max_score > 0 ? (r.score / r.max_score) * 100 : 0
-            const col = pct >= 80 ? '#157A3D' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
+            const col = scoreColor(pct)
             const mistakes = r.mistakes || []
             const isDebate = r.max_score === 20
             return (
@@ -254,6 +306,86 @@ export default function MyResults(props) {
                   <details className="rf-transcript">
                     <summary>What the AI heard</summary>
                     <p>{r.transcript}</p>
+                  </details>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {liveWeeks.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <h3 style={{ margin: '8px 0 12px' }}>Live Tuesday translation</h3>
+
+          <div className="card" style={{ marginBottom: 12 }}>
+            <div className="block-title">Score per week</div>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, height: 140, paddingTop: 8 }}>
+              {liveGraph.map(function (w) {
+                const s = w.score == null ? 0 : w.score
+                const h = Math.max(6, Math.round((s / 100) * 110))
+                return (
+                  <div key={w.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: scoreColor(s) }}>
+                      {w.score == null ? '-' : w.score}
+                    </span>
+                    <div style={{
+                      width: 34, height: h, borderRadius: 6,
+                      background: w.score == null ? 'var(--bg)' : scoreColor(s)
+                    }} />
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>W{w.homework_id}</span>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+
+          {liveWeeks.map(function (w) {
+            const s = w.score
+            return (
+              <div className="card" key={w.id} style={{ marginBottom: 12 }}>
+                <div className="block-title" style={{ justifyContent: 'space-between' }}>
+                  <span>
+                    Week {w.homework_id} — Live translation
+                    {w.cycle_number > 1 ? ' (cycle ' + w.cycle_number + ')' : ''}
+                  </span>
+                  {s != null && (
+                    <span style={{ fontSize: 15, fontWeight: 800, color: scoreColor(s) }}>
+                      {s} / 100
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 10 }}>
+                  {themes[w.homework_id] || ''} · {new Date(w.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' · '}{w.words} words in 30 min
+                  {w.sessions > 1 ? ' · best of ' + w.sessions + ' sessions' : ''}
+                </div>
+                {w.mistakes.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                    {w.mistakes.map(function (tag, i) {
+                      return (
+                        <span key={i} style={{
+                          fontSize: 12, fontWeight: 600, padding: '3px 10px',
+                          borderRadius: 999, background: '#FDEBEC', color: 'var(--red)'
+                        }}>
+                          {MISTAKE_LABELS[tag] || tag}
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+                {w.feedback && (
+                  <div style={{
+                    background: 'var(--primary-soft)', borderRadius: 10,
+                    padding: '12px 16px', fontSize: 14, marginBottom: 8
+                  }}>
+                    {w.feedback}
+                  </div>
+                )}
+                {w.corrected && (
+                  <details className="rf-transcript">
+                    <summary>Corrected version</summary>
+                    <p>{w.corrected}</p>
                   </details>
                 )}
               </div>

@@ -1,164 +1,301 @@
 import { supabase } from './supabase';
+import { getWeeklyCompletion } from './weeklyCompletion';
 
-var SET_SIZE = 10;
+// LEVEL AUTO-UNLOCK SYSTEM
+// All thresholds live here. Tune numbers without touching components.
+export var LEVEL_CONFIG = {
+  completionBar: 70,          // a week "counts" at >= this %
+  l3ConsecutiveWeeks: 2,      // L2 -> L3
+  l4ConsecutiveWeeks: 4,      // counted at Level 3 only
+  l4MasteryWeeks: 3,          // any 3 snapshot weeks with mastery passed
+  masteryTensePct: 80,        // avg best score per tense
+  masteryMinVerbs: 40,        // distinct verbs attempted per tense
+  mondayAvgTarget: 80,        // avg of 2 most recent evaluations
+  mondayCount: 2,
+  l3Tenses: [
+    'present', 'imparfait', 'futur simple', 'passe compose',
+    'plus-que-parfait', 'futur anterieur',
+    'conditionnel present', 'conditionnel passe'
+  ]
+};
 
-function levelAllows(item, level) {
-  if (item.min_level !== null && item.min_level !== undefined && level < item.min_level) return false;
-  if (item.max_level !== null && item.max_level !== undefined && level > item.max_level) return false;
-  return true;
+function normTense(t) {
+  if (!t) return '';
+  return t
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
 }
 
-function trackAllows(item, track) {
-  if (track !== 'oral_only') return true;
-  if (item.skill_tag === 'reading' || item.skill_tag === 'writing') return false;
-  return true;
-}
-
-// Returns { theme, done, total, percent }
-export async function getWeeklyCompletion(profile) {
-  var result = { theme: '', done: 0, total: 0, percent: 0 };
-
-  var gc = await supabase.from('global_cycle').select('*').eq('id', 1).single();
-  if (!gc.data) return result;
-  var homeworkId = gc.data.current_homework_id;
-  var cycleNumber = gc.data.cycle_number;
-  var weekStart = gc.data.week_started_on;
-
-  var hw = await supabase.from('homeworks').select('theme').eq('id', homeworkId).single();
-  if (hw.data) result.theme = hw.data.theme;
-
-  var content = await supabase
-    .from('homework_content')
-    .select('*')
-    .eq('homework_id', homeworkId)
-    .order('day')
-    .order('block')
-    .order('position');
-  if (!content.data) return result;
-
-  var items = [];
+// ---- Verb mastery check (all 8 L3 tenses: avg best pct >= 80, >= 40 verbs each)
+export async function checkVerbMastery(studentId) {
+  var res = await supabase
+    .from('verb_attempts')
+    .select('verb, tense, correct_count, total')
+    .eq('student_id', studentId);
+  if (res.error || !res.data) {
+    return { passed: false, tenses: {} };
+  }
+  var byTense = {};
   var i;
-  for (i = 0; i < content.data.length; i++) {
-    var it = content.data[i];
-    if (levelAllows(it, profile.level) && trackAllows(it, profile.track)) items.push(it);
+  for (i = 0; i < res.data.length; i++) {
+    var row = res.data[i];
+    var tn = normTense(row.tense);
+    if (LEVEL_CONFIG.l3Tenses.indexOf(tn) === -1) continue;
+    if (!byTense[tn]) byTense[tn] = {};
+    var pct = row.total > 0 ? (row.correct_count / row.total) * 100 : 0;
+    if (byTense[tn][row.verb] === undefined || pct > byTense[tn][row.verb]) {
+      byTense[tn][row.verb] = pct; // best attempt per verb+tense
+    }
   }
-
-  // Fetch attempts in parallel
-  var results = await Promise.all([
-    supabase.from('verb_attempts').select('verb, tense').eq('student_id', profile.id).eq('homework_id', homeworkId).eq('cycle_number', cycleNumber),
-    supabase.from('drill_attempts').select('day, block, set_no').eq('student_id', profile.id).eq('homework_id', homeworkId),
-    supabase.from('item_attempts').select('content_id').eq('student_id', profile.id),
-    supabase.from('rapid_fire_attempts').select('content_id').eq('student_id', profile.id).eq('cycle_number', cycleNumber).eq('accepted', true),
-    supabase.from('image_describe_attempts').select('content_id, step_no').eq('student_id', profile.id).eq('cycle_number', cycleNumber).eq('accepted', true),
-    supabase.from('process_attempts').select('content_id, step_no').eq('student_id', profile.id).eq('cycle_number', cycleNumber).eq('accepted', true),
-    supabase.from('submissions').select('homework_id, kind, submitted_at').eq('student_id', profile.id).eq('homework_id', homeworkId).eq('kind', 'writing').gte('submitted_at', weekStart)
-  ]);
-
-  var verbRows = results[0].data || [];
-  var drillRows = results[1].data || [];
-  var itemRows = results[2].data || [];
-  var rfRows = results[3].data || [];
-  var idRows = results[4].data || [];
-  var prRows = results[5].data || [];
-  var writingRows = results[6].data || [];
-
-  var verbDone = {};
-  for (i = 0; i < verbRows.length; i++) verbDone[verbRows[i].verb] = true;
-
-  var drillDone = {};
-  for (i = 0; i < drillRows.length; i++) {
-    drillDone[drillRows[i].day + '|' + drillRows[i].block + '|' + drillRows[i].set_no] = true;
+  var tenses = {};
+  var allPass = true;
+  for (i = 0; i < LEVEL_CONFIG.l3Tenses.length; i++) {
+    var t = LEVEL_CONFIG.l3Tenses[i];
+    var verbs = byTense[t] ? Object.keys(byTense[t]) : [];
+    var sum = 0;
+    var j;
+    for (j = 0; j < verbs.length; j++) sum += byTense[t][verbs[j]];
+    var avg = verbs.length > 0 ? sum / verbs.length : 0;
+    var pass =
+      verbs.length >= LEVEL_CONFIG.masteryMinVerbs &&
+      avg >= LEVEL_CONFIG.masteryTensePct;
+    tenses[t] = { verbCount: verbs.length, avgPct: Math.round(avg), passed: pass };
+    if (!pass) allPass = false;
   }
+  return { passed: allPass, tenses: tenses };
+}
 
-  var itemDone = {};
-  for (i = 0; i < itemRows.length; i++) itemDone[itemRows[i].content_id] = true;
-
-  var rfDone = {};
-  for (i = 0; i < rfRows.length; i++) rfDone[rfRows[i].content_id] = true;
-
-  var idDone = {};
-  for (i = 0; i < idRows.length; i++) idDone[idRows[i].content_id + '|' + idRows[i].step_no] = true;
-
-  var prDone = {};
-  for (i = 0; i < prRows.length; i++) {
-    var key = prRows[i].content_id + '|' + (prRows[i].step_no === null ? 'full' : prRows[i].step_no);
-    prDone[key] = true;
+// ---- Monday evaluations: avg of 2 most recent >= 80
+export async function checkMondayAverage(studentId) {
+  var res = await supabase
+    .from('monday_evaluations')
+    .select('score, created_at')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+    .limit(LEVEL_CONFIG.mondayCount);
+  if (res.error || !res.data || res.data.length < LEVEL_CONFIG.mondayCount) {
+    return { passed: false, avg: null, count: res.data ? res.data.length : 0 };
   }
+  var sum = 0;
+  var i;
+  for (i = 0; i < res.data.length; i++) sum += Number(res.data[i].score || 0);
+  var avg = sum / res.data.length;
+  return { passed: avg >= LEVEL_CONFIG.mondayAvgTarget, avg: Math.round(avg), count: res.data.length };
+}
 
-  var hasWriting = writingRows.length > 0;
+// ---- Streak helpers over snapshots (newest first)
+function consecutiveFromLatest(rows, levelFilter) {
+  var streak = 0;
+  var i;
+  for (i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (levelFilter !== null && Number(r.level_at_snapshot) !== levelFilter) break;
+    if (Number(r.completion_pct) >= LEVEL_CONFIG.completionBar) streak++;
+    else break;
+  }
+  return streak;
+}
 
-  var done = 0;
-  var total = 0;
+export async function getSnapshots(studentId) {
+  var res = await supabase
+    .from('level_week_snapshots')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false });
+  return res.data || [];
+}
 
-  // Group plain solve items (non one-by-one) into drill sets per day+block
-  var drillCounts = {}; // day|block -> count of solve items
-  for (i = 0; i < items.length; i++) {
-    var item = items[i];
-    var extra = item.extra || {};
+// ---- Full read-only progress for cards / My Results
+export async function getLevelProgress(studentId, level) {
+  var lvl = Number(level);
+  if (lvl >= 4) return { level: lvl, done: true };
 
-    if (item.item_type === 'verb_sheet') {
-      total += 1;
-      var verbName = item.prompt;
-      if (verbDone[verbName]) done += 1;
+  var snaps = await getSnapshots(studentId);
 
-    } else if (item.item_type === 'solve') {
-      if (extra.mode === 'one_by_one') {
-        // Ladder item: one unit per item
-        total += 1;
-        if (itemDone[item.id]) done += 1;
-      } else {
-        var dk = item.day + '|' + item.block;
-        drillCounts[dk] = (drillCounts[dk] || 0) + 1;
-      }
-
-    } else if (item.item_type === 'rapid_fire') {
-      total += 1;
-      if (rfDone[item.id]) done += 1;
-
-    } else if (item.item_type === 'image_describe') {
-      var steps = extra.steps || [];
-      var s;
-      for (s = 0; s < steps.length; s++) {
-        total += 1;
-        if (idDone[item.id + '|' + steps[s].step]) done += 1;
-      }
-
-    } else if (item.item_type === 'process_telling') {
-      if (extra.mode === 'all_at_once') {
-        total += 1;
-        if (prDone[item.id + '|full']) done += 1;
-      } else {
-        var psteps = extra.steps || [];
-        var p;
-        for (p = 0; p < psteps.length; p++) {
-          total += 1;
-          if (prDone[item.id + '|' + (p + 1)]) done += 1;
+  if (lvl < 3) {
+    var streak3 = consecutiveFromLatest(snaps, null);
+    var remaining3 = Math.max(0, LEVEL_CONFIG.l3ConsecutiveWeeks - streak3);
+    return {
+      level: lvl,
+      target: 3,
+      done: false,
+      criteria: [
+        {
+          key: 'weeks',
+          label: 'Consecutive weeks at 70%+',
+          current: streak3,
+          targetVal: LEVEL_CONFIG.l3ConsecutiveWeeks,
+          met: streak3 >= LEVEL_CONFIG.l3ConsecutiveWeeks
         }
+      ],
+      weeksRemaining: remaining3,
+      snapshots: snaps
+    };
+  }
+
+  // Level 3 -> 4
+  var l3snaps = [];
+  var i;
+  for (i = 0; i < snaps.length; i++) {
+    if (Number(snaps[i].level_at_snapshot) === 3) l3snaps.push(snaps[i]);
+  }
+  var streak4 = consecutiveFromLatest(snaps, 3);
+  var masteryWeeks = 0;
+  for (i = 0; i < l3snaps.length; i++) {
+    if (l3snaps[i].mastery_passed) masteryWeeks++;
+  }
+  var monday = await checkMondayAverage(studentId);
+  var masteryNow = await checkVerbMastery(studentId);
+
+  var remWeeks = Math.max(0, LEVEL_CONFIG.l4ConsecutiveWeeks - streak4);
+  var remMastery = masteryNow.passed
+    ? Math.max(0, LEVEL_CONFIG.l4MasteryWeeks - masteryWeeks)
+    : Math.max(1, LEVEL_CONFIG.l4MasteryWeeks - masteryWeeks);
+  var remMonday = monday.passed ? 0 : 1;
+  var weeksRemaining = Math.max(remWeeks, remMastery, remMonday);
+
+  return {
+    level: lvl,
+    target: 4,
+    done: false,
+    criteria: [
+      {
+        key: 'weeks',
+        label: 'Consecutive weeks at 70%+ (Level 3)',
+        current: streak4,
+        targetVal: LEVEL_CONFIG.l4ConsecutiveWeeks,
+        met: streak4 >= LEVEL_CONFIG.l4ConsecutiveWeeks
+      },
+      {
+        key: 'mastery',
+        label: 'Weeks with all 8 tenses mastered',
+        current: masteryWeeks,
+        targetVal: LEVEL_CONFIG.l4MasteryWeeks,
+        met: masteryWeeks >= LEVEL_CONFIG.l4MasteryWeeks,
+        detail: masteryNow
+      },
+      {
+        key: 'monday',
+        label: 'Monday evaluations avg (last 2)',
+        current: monday.avg === null ? 0 : monday.avg,
+        targetVal: LEVEL_CONFIG.mondayAvgTarget,
+        met: monday.passed
       }
+    ],
+    weeksRemaining: weeksRemaining,
+    snapshots: snaps
+  };
+}
 
-    } else if (item.item_type === 'writing') {
-      total += 1;
-      if (hasWriting) done += 1;
-    }
-    // instructions, video, reading, audio_task: no completion signal, not counted
+// ---- Projected unlock date
+export function projectUnlockDate(weekStartedOn, weeksRemaining) {
+  if (!weekStartedOn || weeksRemaining <= 0) return null;
+  var d = new Date(weekStartedOn + 'T00:00:00');
+  d.setDate(d.getDate() + 7 * (weeksRemaining + 1)); // unlock happens at next advance after final week
+  return d;
+}
+
+// ---- Advance Week: snapshot + unlock every student. Teacher session only.
+export async function snapshotAndUnlockAll(currentHomeworkId, cycleNumber) {
+  var out = { snapshots: 0, unlocked: [], errors: [] };
+  var studentsRes = await supabase
+    .from('profiles')
+    .select('id, full_name, level, track, role')
+    .eq('role', 'student');
+  if (studentsRes.error || !studentsRes.data) {
+    out.errors.push('load students failed');
+    return out;
   }
+  var students = studentsRes.data;
+  var i;
+  for (i = 0; i < students.length; i++) {
+    var s = students[i];
+    var lvl = Number(s.level);
+    try {
+      var wc = await getWeeklyCompletion(s);
+      var pct = wc.percent;
+      var mastery = lvl === 3 ? await checkVerbMastery(s.id) : { passed: false };
+      var snapRes = await supabase.from('level_week_snapshots').upsert({
+        student_id: s.id,
+        homework_id: currentHomeworkId,
+        cycle_number: cycleNumber,
+        completion_pct: pct,
+        mastery_passed: mastery.passed,
+        level_at_snapshot: lvl
+      }, { onConflict: 'student_id,homework_id,cycle_number' });
+      if (snapRes.error) {
+        out.errors.push(s.full_name + ': snapshot failed');
+        continue;
+      }
+      out.snapshots++;
 
-  // Convert grouped solve items into sets of 10
-  var dkKey;
-  for (dkKey in drillCounts) {
-    var parts = dkKey.split('|');
-    var day = parts[0];
-    var block = parseInt(parts[1], 10);
-    var sets = Math.ceil(drillCounts[dkKey] / SET_SIZE);
-    var n;
-    for (n = 1; n <= sets; n++) {
-      total += 1;
-      if (drillDone[day + '|' + block + '|' + n]) done += 1;
+      if (lvl !== 2 && lvl !== 3) continue;
+
+      var progress = await getLevelProgress(s.id, lvl);
+      var allMet = true;
+      var j;
+      for (j = 0; j < progress.criteria.length; j++) {
+        if (!progress.criteria[j].met) allMet = false;
+      }
+      if (!allMet) continue;
+
+      var toLevel = lvl === 2 ? 3 : 4;
+      var up = await supabase.from('profiles')
+        .update({ level: toLevel })
+        .eq('id', s.id);
+      if (up.error) {
+        out.errors.push(s.full_name + ': level update failed');
+        continue;
+      }
+      await supabase.from('level_unlocks').insert({
+        student_id: s.id,
+        from_level: lvl,
+        to_level: toLevel,
+        unlocked_by: 'auto',
+        criteria_snapshot: { criteria: progress.criteria, cycle_number: cycleNumber, homework_id: currentHomeworkId }
+      });
+      out.unlocked.push({ name: s.full_name, to: toLevel });
+    } catch (e) {
+      out.errors.push(s.full_name + ': ' + (e && e.message ? e.message : 'error'));
     }
   }
+  return out;
+}
 
-  result.done = done;
-  result.total = total;
-  result.percent = total === 0 ? 0 : Math.round((done / total) * 100);
-  return result;
+// ---- Teacher direct L4 unlock
+export async function teacherUnlockL4(studentId, fromLevel) {
+  var up = await supabase.from('profiles')
+    .update({ level: 4 })
+    .eq('id', studentId);
+  if (up.error) return { ok: false, error: up.error.message };
+  var ins = await supabase.from('level_unlocks').insert({
+    student_id: studentId,
+    from_level: Number(fromLevel),
+    to_level: 4,
+    unlocked_by: 'teacher',
+    criteria_snapshot: null
+  });
+  if (ins.error) return { ok: false, error: ins.error.message };
+  return { ok: true };
+}
+
+// ---- Banner: latest undismissed unlock
+export async function getUndismissedUnlock(studentId) {
+  var res = await supabase
+    .from('level_unlocks')
+    .select('*')
+    .eq('student_id', studentId)
+    .is('dismissed_at', null)
+    .order('created_at', { ascending: false })
+    .limit(1);
+  if (res.error || !res.data || res.data.length === 0) return null;
+  return res.data[0];
+}
+
+export async function dismissUnlock(unlockId) {
+  await supabase.from('level_unlocks')
+    .update({ dismissed_at: new Date().toISOString() })
+    .eq('id', unlockId);
 }

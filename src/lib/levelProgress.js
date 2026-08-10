@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { computeWeeklyCompletion } from './weeklyCompletion';
+import { getWeeklyCompletion } from './weeklyCompletion';
 
 // LEVEL AUTO-UNLOCK SYSTEM
 // All thresholds live here. Tune numbers without touching components.
@@ -199,10 +199,10 @@ export function projectUnlockDate(weekStartedOn, weeksRemaining) {
 
 // ---- Advance Week: snapshot + unlock every student. Teacher session only.
 export async function snapshotAndUnlockAll(currentHomeworkId, cycleNumber) {
-  var out = { snapshots: 0, unlocked: [] , errors: [] };
+  var out = { snapshots: 0, unlocked: [], errors: [] };
   var studentsRes = await supabase
     .from('profiles')
-    .select('id, full_name, level, role')
+    .select('id, full_name, level, track, role')
     .eq('role', 'student');
   if (studentsRes.error || !studentsRes.data) {
     out.errors.push('load students failed');
@@ -214,7 +214,8 @@ export async function snapshotAndUnlockAll(currentHomeworkId, cycleNumber) {
     var s = students[i];
     var lvl = Number(s.level);
     try {
-      var pct = await computeWeeklyCompletion(s.id, currentHomeworkId);
+      var wc = await getWeeklyCompletion(s);
+      var pct = wc.percent;
       var mastery = lvl === 3 ? await checkVerbMastery(s.id) : { passed: false };
       var snapRes = await supabase.from('level_week_snapshots').upsert({
         student_id: s.id,
@@ -232,7 +233,6 @@ export async function snapshotAndUnlockAll(currentHomeworkId, cycleNumber) {
 
       if (lvl !== 2 && lvl !== 3) continue;
 
-      // already teacher-unlocked to 4? (level would be 4, skipped above)
       var progress = await getLevelProgress(s.id, lvl);
       var allMet = true;
       var j;

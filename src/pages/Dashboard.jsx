@@ -3,6 +3,8 @@ import { supabase } from '../lib/supabase'
 import WeeklyProgressCard from '../components/WeeklyProgressCard'
 import MondayStatsCard from '../components/MondayStatsCard'
 import RapidFireProgressCard from '../components/RapidFireProgressCard'
+import LevelProgressCard from '../components/LevelProgressCard'
+import { getUndismissedUnlock, dismissUnlock } from '../lib/levelProgress'
 
 function ymd(date) {
   return date.toISOString().slice(0, 10)
@@ -14,6 +16,7 @@ export default function Dashboard(props) {
   const [examDate, setExamDate] = useState('')
   const [savingExam, setSavingExam] = useState(false)
   const [todaySeconds, setTodaySeconds] = useState(0)
+  const [unlock, setUnlock] = useState(null)
   const [loading, setLoading] = useState(true)
 
   async function load() {
@@ -28,6 +31,8 @@ export default function Dashboard(props) {
       .eq('day', ymd(new Date()))
     let total = 0
     ;(tRes.data || []).forEach(function (r) { total += r.seconds })
+    const u = await getUndismissedUnlock(profile.id)
+    setUnlock(u)
     setTodaySeconds(total)
     setDays(clRes.data || [])
     setExamDate(profile.exam_date || '')
@@ -35,6 +40,12 @@ export default function Dashboard(props) {
   }
 
   useEffect(function () { if (profile) load() }, [profile])
+
+  async function handleDismissUnlock() {
+    if (!unlock) return
+    await dismissUnlock(unlock.id)
+    setUnlock(null)
+  }
 
   async function saveExamDate() {
     setSavingExam(true)
@@ -119,6 +130,22 @@ export default function Dashboard(props) {
         Bonjour{profile.full_name ? ', ' + profile.full_name.split(' ')[0] : ''}!
       </h2>
 
+      {unlock && (
+        <div className="card lvl-banner">
+          <div>
+            <div className="lvl-banner-title">
+              Congratulations! You have unlocked Level {unlock.to_level}
+            </div>
+            <div className="lvl-banner-sub">
+              New tenses and content are now open for you. Bonne continuation!
+            </div>
+          </div>
+          <button className="sub-btn" onClick={handleDismissUnlock}>
+            Merci!
+          </button>
+        </div>
+      )}
+
       <div className="cl-stats">
         <div className="card cl-stat">
           <div className="stat-value">
@@ -154,6 +181,10 @@ export default function Dashboard(props) {
 
       <div style={{ marginBottom: 16 }}>
         <RapidFireProgressCard user={profile} />
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <LevelProgressCard user={profile} />
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { aggregateAttempts, TenseMasteryList } from './MyTenses'
+import { getLevelProgress, projectUnlockDate, LEVEL_CONFIG } from '../lib/levelProgress'
 
 const MISTAKE_LABELS = {
   word_order: 'Word order',
@@ -23,6 +24,12 @@ function scoreColor(pct) {
   return pct >= 80 ? '#157A3D' : pct >= 50 ? 'var(--amber)' : 'var(--red)'
 }
 
+function formatEta(d) {
+  if (!d) return null
+  var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+  return months[d.getMonth()] + ' ' + d.getDate() + ', ' + d.getFullYear()
+}
+
 export default function MyResults(props) {
   const profile = props.profile
   const [evals, setEvals] = useState([])
@@ -32,6 +39,8 @@ export default function MyResults(props) {
   const [drills, setDrills] = useState([])
   const [rfResults, setRfResults] = useState([])
   const [liveWeeks, setLiveWeeks] = useState([])
+  const [levelProg, setLevelProg] = useState(null)
+  const [weekStartedOn, setWeekStartedOn] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(function () {
@@ -134,6 +143,12 @@ export default function MyResults(props) {
         return new Date(b.date).getTime() - new Date(a.date).getTime()
       })
 
+      // Level progress (hidden for L4)
+      let lp = null
+      if (Number(profile.level) >= 2 && Number(profile.level) < 4) {
+        lp = await getLevelProgress(profile.id, Number(profile.level))
+      }
+
       if (alive) {
         setEvals(evRes.data || [])
         setThemes(themeMap)
@@ -142,6 +157,8 @@ export default function MyResults(props) {
         setDrills(drillList)
         setRfResults(rfRes.data || [])
         setLiveWeeks(liveList)
+        setLevelProg(lp)
+        setWeekStartedOn(cyc.data ? cyc.data.week_started_on : null)
         setLoading(false)
       }
     }
@@ -152,6 +169,93 @@ export default function MyResults(props) {
   if (loading) return <div className="card">Loading results...</div>
 
   const liveGraph = liveWeeks.slice().reverse()
+
+  let levelSection = null
+  if (levelProg && !levelProg.done) {
+    const allMet = levelProg.criteria.every(function (c) { return c.met })
+    const eta = allMet ? null : projectUnlockDate(weekStartedOn, levelProg.weeksRemaining)
+    const historyRows = (levelProg.snapshots || []).slice(0, 12)
+    let streakBrokenSeen = false
+    const isL3Journey = Number(levelProg.target) === 4
+
+    levelSection = (
+      <div style={{ marginBottom: 16 }}>
+        <h3 style={{ margin: '8px 0 12px' }}>Level progress</h3>
+
+        <div className="card lvl-card" style={{ marginBottom: 12 }}>
+          <div className="lvl-head">
+            <div className="block-title" style={{ margin: 0 }}>
+              Path to Level {levelProg.target}
+            </div>
+            {allMet ? (
+              <span className="pill ontime">Ready — unlocks at next week advance</span>
+            ) : (
+              eta && <span className="lvl-eta">Estimated unlock: {formatEta(eta)}</span>
+            )}
+          </div>
+          {levelProg.criteria.map(function (c) {
+            const pct = c.targetVal > 0
+              ? Math.min(100, Math.round((c.current / c.targetVal) * 100))
+              : 0
+            return (
+              <div key={c.key} className="lvl-row">
+                <div className="lvl-row-top">
+                  <span className="lvl-label">{c.label}</span>
+                  <span className={c.met ? 'lvl-val lvl-val-met' : 'lvl-val'}>
+                    {c.current} / {c.targetVal}{c.key === 'monday' ? ' avg' : ''}
+                  </span>
+                </div>
+                <div className="lvl-bar-track">
+                  <div
+                    className={c.met ? 'lvl-bar lvl-bar-met' : 'lvl-bar'}
+                    style={{ width: pct + '%' }}
+                  />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {historyRows.length > 0 && (
+          <div className="card">
+            <div className="block-title">Week history</div>
+            {historyRows.map(function (s) {
+              const counted = Number(s.completion_pct) >= LEVEL_CONFIG.completionBar
+              const wrongLevel = isL3Journey && Number(s.level_at_snapshot) !== 3
+              let marker
+              if (wrongLevel) {
+                marker = <span className="lvl-hist-pill lvl-hist-muted">Level {s.level_at_snapshot}</span>
+              } else if (counted && !streakBrokenSeen) {
+                marker = <span className="lvl-hist-pill lvl-hist-ok">Counted</span>
+              } else if (!counted) {
+                streakBrokenSeen = true
+                marker = <span className="lvl-hist-pill lvl-hist-bad">Streak broken</span>
+              } else {
+                marker = <span className="lvl-hist-pill lvl-hist-muted">Before break</span>
+              }
+              return (
+                <div className="lvl-hist-row" key={s.id}>
+                  <span className="lvl-hist-week">
+                    Week {s.homework_id}
+                    {s.cycle_number > 1 ? ' (c' + s.cycle_number + ')' : ''}
+                  </span>
+                  <span style={{ fontWeight: 800, color: scoreColor(Number(s.completion_pct)) }}>
+                    {Math.round(Number(s.completion_pct))}%
+                  </span>
+                  {marker}
+                  {isL3Journey && !wrongLevel && (
+                    s.mastery_passed
+                      ? <span className="lvl-hist-pill lvl-hist-ok">Tenses mastered</span>
+                      : <span className="lvl-hist-pill lvl-hist-muted">Tenses not yet</span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -393,6 +497,8 @@ export default function MyResults(props) {
           })}
         </div>
       )}
+
+      {levelSection}
 
       <h3 style={{ margin: '8px 0 12px' }}>Tense mastery</h3>
       <TenseMasteryList rows={tenseRows} />

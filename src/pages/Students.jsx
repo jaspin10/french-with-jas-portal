@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import StudentTenses from '../components/StudentTenses'
 import { useViewAs } from '../lib/viewAs'
+import { teacherUnlockL4 } from '../lib/levelProgress'
 
 function ymd(date) {
   return date.toISOString().slice(0, 10)
@@ -15,6 +16,7 @@ export default function Students() {
   const [cycle, setCycle] = useState(null)
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState(null)
+  const [unlockingId, setUnlockingId] = useState(null)
   const { setViewAs } = useViewAs()
 
   async function load() {
@@ -57,6 +59,23 @@ export default function Students() {
 
   async function changeLevel(student, newLevel) {
     await supabase.from('profiles').update({ level: newLevel }).eq('id', student.id)
+    load()
+  }
+
+  async function unlockL4(student) {
+    const ok = window.confirm(
+      'Unlock Level 4 for ' + (student.full_name || 'this student') + ' now? ' +
+      'This grants direct Level 4 access, ends automatic level tracking, ' +
+      'and is recorded as a teacher unlock.'
+    )
+    if (!ok) return
+    setUnlockingId(student.id)
+    const res = await teacherUnlockL4(student.id, student.level)
+    setUnlockingId(null)
+    if (!res.ok) {
+      window.alert('Unlock failed: ' + res.error)
+      return
+    }
     load()
   }
 
@@ -119,6 +138,7 @@ export default function Students() {
               <th style={{ padding: '10px 8px' }}>Student</th>
               <th style={{ padding: '10px 8px' }}>Phone</th>
               <th style={{ padding: '10px 8px' }}>Level</th>
+              <th style={{ padding: '10px 8px' }}>Level 4</th>
               <th style={{ padding: '10px 8px' }}>Exam date</th>
               <th style={{ padding: '10px 8px' }}>Checklist</th>
               <th style={{ padding: '10px 8px' }}>This week</th>
@@ -131,7 +151,7 @@ export default function Students() {
           <tbody>
             {students.length === 0 && (
               <tr>
-                <td colSpan="10" style={{ padding: 20, color: 'var(--text-muted)' }}>
+                <td colSpan="11" style={{ padding: 20, color: 'var(--text-muted)' }}>
                   No students yet.
                 </td>
               </tr>
@@ -141,6 +161,8 @@ export default function Students() {
               const pct = checklistPct(s.id)
               const last = lastSubmission(s.id)
               const thisWeek = submittedThisWeek(s.id)
+              const lvl = Number(s.level)
+              const canUnlockL4 = lvl === 2 || lvl === 3
               return (
                 <Fragment key={s.id}>
                 <tr style={{ borderTop: '1px solid #F0F1F6' }}>
@@ -172,6 +194,19 @@ export default function Students() {
                       <option value="3">3</option>
                       <option value="4">4</option>
                     </select>
+                  </td>
+                  <td style={{ padding: '10px 8px' }}>
+                    {canUnlockL4 ? (
+                      <button
+                        className="reveal-btn"
+                        disabled={unlockingId === s.id}
+                        onClick={function () { unlockL4(s) }}
+                      >
+                        {unlockingId === s.id ? 'Unlocking...' : 'Unlock L4 now'}
+                      </button>
+                    ) : (
+                      <span style={{ color: 'var(--text-muted)' }}>—</span>
+                    )}
                   </td>
                   <td style={{ padding: '10px 8px' }}>
                     {s.exam_date || <span style={{ color: 'var(--text-muted)' }}>not set</span>}
@@ -225,7 +260,7 @@ export default function Students() {
                 </tr>
                 {expandedId === s.id ? (
                   <tr>
-                    <td colSpan="10" style={{ padding: '10px 8px', background: '#FAFAFE' }}>
+                    <td colSpan="11" style={{ padding: '10px 8px', background: '#FAFAFE' }}>
                       <StudentTenses studentId={s.id} />
                     </td>
                   </tr>

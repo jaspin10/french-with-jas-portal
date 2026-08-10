@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { snapshotAndUnlockAll } from '../lib/levelProgress'
 
 export default function HomeworkManager() {
   const [homeworks, setHomeworks] = useState([])
@@ -8,6 +9,8 @@ export default function HomeworkManager() {
   const [editingId, setEditingId] = useState(null)
   const [draftMessage, setDraftMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [advancing, setAdvancing] = useState(false)
+  const [advanceResult, setAdvanceResult] = useState(null)
 
   async function load() {
     const hRes = await supabase.from('homeworks').select('*').order('id')
@@ -38,10 +41,27 @@ export default function HomeworkManager() {
     const isWrap = cycle.current_homework_id >= 25
     const ok = window.confirm(
       'Advance the global cycle to Week ' + next + '? ' +
-      'Every student in Levels 2-4 will immediately receive this homework.' +
+      'Every student in Levels 2-4 will immediately receive this homework. ' +
+      'Level snapshots and auto-unlock checks will run for all students first.' +
       (isWrap ? ' This also starts a NEW ROTATION CYCLE: all verb tests reset for fresh attempts.' : '')
     )
     if (!ok) return
+
+    setAdvancing(true)
+    setAdvanceResult(null)
+
+    // 1. Snapshot the week that is ENDING + run auto-unlock checks
+    let result = { snapshots: 0, unlocked: [], errors: [] }
+    try {
+      result = await snapshotAndUnlockAll(
+        cycle.current_homework_id,
+        cycle.cycle_number || 1
+      )
+    } catch (e) {
+      result.errors.push('Level check crashed: ' + (e && e.message ? e.message : 'unknown'))
+    }
+
+    // 2. Advance the cycle
     const updates = {
       current_homework_id: next,
       week_started_on: new Date().toISOString().slice(0, 10)
@@ -53,6 +73,9 @@ export default function HomeworkManager() {
       .from('global_cycle')
       .update(updates)
       .eq('id', 1)
+
+    setAdvanceResult(result)
+    setAdvancing(false)
     load()
   }
 
@@ -89,10 +112,46 @@ export default function HomeworkManager() {
             Week started {cycle ? cycle.week_started_on : '—'} · Next in rotation: Week {cycle ? nextInRotation(current) : '—'}
           </div>
         </div>
-        <button className="sub-btn" onClick={advanceWeek}>
-          Advance to next week
+        <button className="sub-btn" onClick={advanceWeek} disabled={advancing}>
+          {advancing ? 'Running level checks...' : 'Advance to next week'}
         </button>
       </div>
+
+      {advanceResult && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <div>
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>Week advanced — level check results</div>
+              <div style={{ fontSize: 14 }}>
+                Snapshots saved: {advanceResult.snapshots}
+              </div>
+              <div style={{ fontSize: 14, marginTop: 4 }}>
+                {advanceResult.unlocked.length > 0 ? (
+                  <span>
+                    Unlocked: {advanceResult.unlocked.map(function (u) {
+                      return u.name + ' (to Level ' + u.to + ')'
+                    }).join(', ')}
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--text-muted)' }}>No students unlocked this week.</span>
+                )}
+              </div>
+              {advanceResult.errors.length > 0 && (
+                <div style={{ fontSize: 13, marginTop: 6, color: '#E17055' }}>
+                  Issues: {advanceResult.errors.join(' · ')}
+                </div>
+              )}
+            </div>
+            <button
+              className="reveal-btn"
+              style={{ background: '#F0F1F6', color: 'var(--text-muted)' }}
+              onClick={function () { setAdvanceResult(null) }}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card" style={{ overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>

@@ -1162,3 +1162,120 @@ html[data-theme="dark"] .viewas-exit {
   background: #1E2029;
   color: #8B7CF6;
 }
+
+/* LEVEL AUTO-UNLOCK SYSTEM */
+.lvl-card {
+  margin-bottom: 0;
+}
+.lvl-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.lvl-eta {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-soft);
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+.lvl-row {
+  margin-bottom: 12px;
+}
+.lvl-row:last-child {
+  margin-bottom: 0;
+}
+.lvl-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+.lvl-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.lvl-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.lvl-val-met {
+  color: #157A3D;
+}
+.lvl-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: #F0F1F6;
+  overflow: hidden;
+}
+.lvl-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+  transition: width 0.4s ease;
+}
+.lvl-bar-met {
+  background: #157A3D;
+}
+.lvl-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  background: var(--primary-soft);
+  border: 1px solid var(--primary);
+}
+.lvl-banner-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+.lvl-banner-sub {
+  font-size: 14px;
+  color: var(--text);
+}
+.lvl-hist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 9px 0;
+  border-top: 1px solid #F0F1F6;
+  font-size: 13px;
+}
+.lvl-hist-row:first-of-type {
+  border-top: none;
+}
+.lvl-hist-week {
+  font-weight: 700;
+  min-width: 90px;
+}
+.lvl-hist-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.lvl-hist-ok {
+  background: var(--green-soft);
+  color: #157A3D;
+}
+.lvl-hist-bad {
+  background: #FDEBEC;
+  color: var(--red);
+}
+.lvl-hist-muted {
+  background: #F0F1F6;
+  color: var(--text-muted);
+}

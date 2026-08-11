@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import StudentTenses from '../components/StudentTenses'
+import SyncMeetButton from '../components/SyncMeetButton'
 import { useViewAs } from '../lib/viewAs'
 import { teacherUnlockL4 } from '../lib/levelProgress'
 
@@ -112,7 +113,10 @@ export default function Students() {
 
   return (
     <div>
-      <h2 style={{ marginBottom: 16 }}>Students</h2>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <h2 style={{ margin: 0 }}>Students</h2>
+        <SyncMeetButton />
+      </div>
 
       <div className="cl-stats">
         <div className="card cl-stat">

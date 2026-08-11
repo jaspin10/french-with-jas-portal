@@ -1279,3 +1279,18 @@ html[data-theme="dark"] .viewas-exit {
   background: #F0F1F6;
   color: var(--text-muted);
 }
+
+.rf-goals { display: flex; flex-wrap: wrap; gap: 10px 18px; margin: 10px 0; }
+.rf-goal-row { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+.rf-goal-label { color: var(--muted, #888); }
+.rf-goal-time { font-weight: 600; }
+.rfp-chart { width: 100%; height: auto; }
+.rfp-grid { stroke: var(--border, #e5e5ef); stroke-width: 1; }
+.rfp-axis-label { fill: var(--muted, #888); font-size: 11px; }
+.rfp-line-you { stroke: var(--primary, #6C5CE7); stroke-width: 2.5; }
+.rfp-dot { fill: var(--primary, #6C5CE7); }
+.rfp-bench { stroke-width: 1.5; stroke-dasharray: 5 4; }
+.rfp-line-top20 { stroke: #f0a500; }
+.rfp-line-top10 { stroke: #e07b39; }
+.rfp-line-top5 { stroke: #d63447; }
+.rfp-bench-label { fill: var(--muted, #888); font-size: 11px; }

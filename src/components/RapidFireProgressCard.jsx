@@ -8,9 +8,13 @@ const BLOCK_LABELS = {
   5: 'Debate CLB 7'
 };
 
+const W = 520;
+const H = 220;
+const PAD = { top: 16, right: 16, bottom: 28, left: 44 };
+
 export default function RapidFireProgressCard({ user }) {
-  const [rows, setRows] = useState([]); // student accepted attempts with day/block
-  const [averages, setAverages] = useState([]);
+  const [rows, setRows] = useState([]);
+  const [tops, setTops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeBlock, setActiveBlock] = useState(2);
 
@@ -19,16 +23,16 @@ export default function RapidFireProgressCard({ user }) {
     async function load() {
       const { data: mine } = await supabase
         .from('rapid_fire_attempts')
-        .select('duration_seconds, cycle_number, accepted, homework_content!inner(homework_id, day, block)')
+        .select('duration_seconds, cycle_number, homework_content!inner(homework_id, day, block)')
         .eq('student_id', user.id)
         .eq('accepted', true)
         .eq('homework_content.day', 'tuesday');
 
-      const { data: avgs } = await supabase.rpc('rapid_fire_class_averages');
+      const { data: bench } = await supabase.rpc('rapid_fire_top_times');
 
       if (!alive) return;
       setRows(mine || []);
-      setAverages((avgs || []).filter(function (a) { return a.day === 'tuesday'; }));
+      setTops((bench || []).filter(function (t) { return t.day === 'tuesday'; }));
       setLoading(false);
     }
     load();
@@ -40,43 +44,59 @@ export default function RapidFireProgressCard({ user }) {
 
   const blocks = [2, 3, 4, 5];
 
-  // Build per-block series: one point per (homework_id, cycle_number) the student completed
-  const myPoints = rows
-    .filter(function (r) { return r.homework_content.block === activeBlock; })
-    .map(function (r) {
-      return {
+  // One point per (cycle, homework): the student's best accepted time that week
+  const weekMap = {};
+  rows.forEach(function (r) {
+    if (r.homework_content.block !== activeBlock) return;
+    const key = r.cycle_number + '-' + r.homework_content.homework_id;
+    const sec = Number(r.duration_seconds);
+    if (!weekMap[key] || sec < weekMap[key].seconds) {
+      weekMap[key] = {
         homework_id: r.homework_content.homework_id,
         cycle_number: r.cycle_number,
-        seconds: Number(r.duration_seconds)
+        seconds: sec
       };
-    })
-    .sort(function (a, b) {
-      return a.cycle_number - b.cycle_number || a.homework_id - b.homework_id;
-    });
+    }
+  });
+  const points = Object.values(weekMap).sort(function (a, b) {
+    return a.cycle_number - b.cycle_number || a.homework_id - b.homework_id;
+  });
 
-  function classAvgFor(p) {
-    const hit = averages.find(function (a) {
-      return a.block === activeBlock &&
-        a.homework_id === p.homework_id &&
-        a.cycle_number === p.cycle_number;
-    });
-    return hit ? Number(hit.avg_seconds) : null;
+  const benchRow = tops.find(function (t) { return t.block === activeBlock; }) || {};
+  const benchLines = [
+    { label: 'Top 20', value: benchRow.top20, cls: 'rfp-line-top20' },
+    { label: 'Top 10', value: benchRow.top10, cls: 'rfp-line-top10' },
+    { label: 'Top 5', value: benchRow.top5, cls: 'rfp-line-top5' }
+  ].filter(function (b) { return b.value !== null && b.value !== undefined; });
+
+  const allVals = points.map(function (p) { return p.seconds; })
+    .concat(benchLines.map(function (b) { return Number(b.value); }));
+  const maxVal = allVals.length > 0 ? Math.max.apply(null, allVals) * 1.1 : 60;
+  const minVal = 0;
+
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+
+  function x(i) {
+    if (points.length === 1) return PAD.left + plotW / 2;
+    return PAD.left + (i / (points.length - 1)) * plotW;
   }
-
-  const maxVal = Math.max.apply(null, myPoints.map(function (p) {
-    const a = classAvgFor(p);
-    return Math.max(p.seconds, a || 0);
-  }));
-
+  function y(v) {
+    return PAD.top + plotH - ((v - minVal) / (maxVal - minVal)) * plotH;
+  }
   function fmt(s) {
     const m = Math.floor(s / 60);
     const sec = Math.round(s % 60);
     return m + ':' + (sec < 10 ? '0' : '') + sec;
   }
 
+  const path = points.map(function (p, i) {
+    return (i === 0 ? 'M' : 'L') + x(i).toFixed(1) + ' ' + y(p.seconds).toFixed(1);
+  }).join(' ');
+
   return (
     <div className="card">
-      <div className="block-title">Rapid Fire — your speed vs the class</div>
+      <div className="block-title">Rapid Fire — your speed vs the top students</div>
 
       <div className="rf-tabs" style={{ marginBottom: 12 }}>
         {blocks.map(function (b) {
@@ -89,34 +109,49 @@ export default function RapidFireProgressCard({ user }) {
         })}
       </div>
 
-      {myPoints.length === 0 && (
+      {points.length === 0 && (
         <p className="rfp-empty">No completed recordings for this block yet.</p>
       )}
 
-      {myPoints.map(function (p, i) {
-        const avg = classAvgFor(p);
-        const myPct = maxVal > 0 ? Math.max(6, (p.seconds / maxVal) * 100) : 0;
-        const avgPct = avg && maxVal > 0 ? Math.max(6, (avg / maxVal) * 100) : 0;
-        return (
-          <div className="rfp-week" key={i}>
-            <div className="rfp-week-label">Week {p.homework_id} · cycle {p.cycle_number}</div>
-            <div className="rfp-bar-row">
-              <span className="rfp-bar-tag">You</span>
-              <div className="rfp-bar rfp-bar-you" style={{ width: myPct + '%' }}></div>
-              <span className="rfp-bar-val">{fmt(p.seconds)}</span>
-            </div>
-            {avg !== null && (
-              <div className="rfp-bar-row">
-                <span className="rfp-bar-tag">Class</span>
-                <div className="rfp-bar rfp-bar-class" style={{ width: avgPct + '%' }}></div>
-                <span className="rfp-bar-val">{fmt(avg)}</span>
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {points.length > 0 && (
+        <div>
+          <svg viewBox={'0 0 ' + W + ' ' + H} className="rfp-chart" role="img">
+            {[0.25, 0.5, 0.75, 1].map(function (f) {
+              const v = minVal + (maxVal - minVal) * f;
+              return (
+                <g key={f}>
+                  <line x1={PAD.left} y1={y(v)} x2={W - PAD.right} y2={y(v)} className="rfp-grid" />
+                  <text x={PAD.left - 6} y={y(v) + 4} textAnchor="end" className="rfp-axis-label">{fmt(v)}</text>
+                </g>
+              );
+            })}
 
-      <p className="rfp-note">Class average = the 20 fastest accepted recordings that week. Shorter bar is better.</p>
+            {benchLines.map(function (b) {
+              return (
+                <g key={b.label}>
+                  <line x1={PAD.left} y1={y(Number(b.value))} x2={W - PAD.right} y2={y(Number(b.value))} className={'rfp-bench ' + b.cls} />
+                  <text x={W - PAD.right} y={y(Number(b.value)) - 4} textAnchor="end" className="rfp-bench-label">{b.label + ' ' + fmt(Number(b.value))}</text>
+                </g>
+              );
+            })}
+
+            <path d={path} className="rfp-line-you" fill="none" />
+            {points.map(function (p, i) {
+              return <circle key={i} cx={x(i)} cy={y(p.seconds)} r="4" className="rfp-dot" />;
+            })}
+
+            {points.map(function (p, i) {
+              return (
+                <text key={'l' + i} x={x(i)} y={H - 8} textAnchor="middle" className="rfp-axis-label">
+                  W{p.homework_id}
+                </text>
+              );
+            })}
+          </svg>
+
+          <p className="rfp-note">Your fastest passed recording each week. Dashed lines are the times to beat to enter the Top 20 / 10 / 5 (all students, all time). Lower is better.</p>
+        </div>
+      )}
     </div>
   );
 }

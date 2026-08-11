@@ -48,7 +48,7 @@ export async function getWeeklyCompletion(profile) {
     supabase.from('verb_attempts').select('verb, tense').eq('student_id', profile.id).eq('homework_id', homeworkId).eq('cycle_number', cycleNumber),
     supabase.from('drill_attempts').select('day, block, set_no').eq('student_id', profile.id).eq('homework_id', homeworkId),
     supabase.from('item_attempts').select('content_id').eq('student_id', profile.id),
-    supabase.from('rapid_fire_attempts').select('content_id').eq('student_id', profile.id).eq('cycle_number', cycleNumber).eq('accepted', true),
+    supabase.from('rapid_fire_attempts').select('content_id, cycle_number, homework_content!inner(day, block)').eq('student_id', profile.id).eq('accepted', true),
     supabase.from('image_describe_attempts').select('content_id, step_no').eq('student_id', profile.id).eq('cycle_number', cycleNumber).eq('accepted', true),
     supabase.from('process_attempts').select('content_id, step_no').eq('student_id', profile.id).eq('cycle_number', cycleNumber).eq('accepted', true),
     supabase.from('submissions').select('homework_id, kind, submitted_at').eq('student_id', profile.id).eq('homework_id', homeworkId).eq('kind', 'writing').gte('submitted_at', weekStart)
@@ -73,8 +73,19 @@ export async function getWeeklyCompletion(profile) {
   var itemDone = {};
   for (i = 0; i < itemRows.length; i++) itemDone[itemRows[i].content_id] = true;
 
-  var rfDone = {};
-  for (i = 0; i < rfRows.length; i++) rfDone[rfRows[i].content_id] = true;
+  // Rapid Fire v3: rfCur = passed attempts per content this cycle;
+  // rfHistory = block types (day|block) with any accepted attempt BEFORE
+  // this cycle (first-cycle detection). First cycle needs 5 passed, else 1.
+  var rfCur = {};
+  var rfHistory = {};
+  for (i = 0; i < rfRows.length; i++) {
+    var rfr = rfRows[i];
+    if (rfr.cycle_number === cycleNumber) {
+      rfCur[rfr.content_id] = (rfCur[rfr.content_id] || 0) + 1;
+    } else if (rfr.cycle_number < cycleNumber) {
+      rfHistory[rfr.homework_content.day + '|' + rfr.homework_content.block] = true;
+    }
+  }
 
   var idDone = {};
   for (i = 0; i < idRows.length; i++) idDone[idRows[i].content_id + '|' + idRows[i].step_no] = true;
@@ -113,7 +124,9 @@ export async function getWeeklyCompletion(profile) {
 
     } else if (item.item_type === 'rapid_fire') {
       total += 1;
-      if (rfDone[item.id]) done += 1;
+      var rfFirst = !rfHistory[item.day + '|' + item.block];
+      var rfNeed = rfFirst ? 5 : 1;
+      if ((rfCur[item.id] || 0) >= rfNeed) done += 1;
 
     } else if (item.item_type === 'image_describe') {
       var steps = extra.steps || [];

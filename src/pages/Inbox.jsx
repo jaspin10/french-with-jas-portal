@@ -48,7 +48,7 @@ export default function Inbox() {
 
   function rapidFireInfo(sub) {
     if (!sub.storage_path) return null
-    const m = sub.storage_path.match(/rapidfire_(\d+)_c(\d+)\.webm$/)
+    const m = sub.storage_path.match(/rapidfire_(\d+)_c(\d+)\.(webm|mp4)$/)
     if (!m) return null
     const contentId = Number(m[1])
     const cycle = Number(m[2])
@@ -76,7 +76,7 @@ export default function Inbox() {
 
   function imageDescribeInfo(sub) {
     if (!sub.storage_path) return null
-    const m = sub.storage_path.match(/imgdesc_(\d+)_s(\d+)_c(\d+)\.webm$/)
+    const m = sub.storage_path.match(/imgdesc_(\d+)_s(\d+)_c(\d+)\.(webm|mp4)$/)
     if (!m) return null
     const contentId = Number(m[1])
     const stepNo = Number(m[2])
@@ -104,7 +104,7 @@ export default function Inbox() {
 
   function processInfo(sub) {
     if (!sub.storage_path) return null
-    const m = sub.storage_path.match(/process_(\d+)(?:_s(\d+))?_c(\d+)\.webm$/)
+    const m = sub.storage_path.match(/process_(\d+)(?:_s(\d+))?_c(\d+)\.(webm|mp4)$/)
     if (!m) return null
     const contentId = Number(m[1])
     const stepNo = m[2] ? Number(m[2]) : null

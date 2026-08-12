@@ -1294,3 +1294,6 @@ html[data-theme="dark"] .viewas-exit {
 .rfp-line-top10 { stroke: #e07b39; }
 .rfp-line-top5 { stroke: #d63447; }
 .rfp-bench-label { fill: var(--muted, #888); font-size: 11px; }
+
+.cl-rec-heading { margin-top: 16px; }
+.cl-rec-actions { display: flex; gap: 8px; }

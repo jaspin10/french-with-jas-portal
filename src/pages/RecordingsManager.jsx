@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import SyncRecordingsButton from '../components/SyncRecordingsButton';
 
 export default function RecordingsManager() {
   const [recordings, setRecordings] = useState([]);
@@ -10,6 +11,10 @@ export default function RecordingsManager() {
   const [recordedOn, setRecordedOn] = useState('');
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  const [editId, setEditId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(function () {
     load();
@@ -66,9 +71,40 @@ export default function RecordingsManager() {
     load();
   }
 
+  function startEdit(r) {
+    setEditId(r.id);
+    setEditTitle(r.title || '');
+    setEditNotes(r.notes_url || '');
+  }
+
+  function cancelEdit() {
+    setEditId(null);
+    setEditTitle('');
+    setEditNotes('');
+  }
+
+  async function saveEdit() {
+    if (!editTitle.trim()) return;
+    setEditSaving(true);
+    const { error } = await supabase.from('recordings').update({
+      title: editTitle.trim(),
+      notes_url: editNotes.trim() || null
+    }).eq('id', editId);
+    setEditSaving(false);
+    if (error) {
+      setMsg('Edit error: ' + error.message);
+      return;
+    }
+    cancelEdit();
+    load();
+  }
+
   return (
     <div>
-      <h2 style={{ marginBottom: 16 }}>Recordings</h2>
+      <div className="rm-header">
+        <h2>Recordings</h2>
+        <SyncRecordingsButton onDone={load} />
+      </div>
 
       <div className="card">
         <div className="block-title">Add a recording</div>
@@ -118,16 +154,48 @@ export default function RecordingsManager() {
         ) : (
           <div>
             {recordings.map(function (r) {
+              if (editId === r.id) {
+                return (
+                  <div className="cl-recording rm-edit-row" key={r.id}>
+                    <div className="rm-edit-fields">
+                      <input
+                        className="solve-input"
+                        value={editTitle}
+                        onChange={function (e) { setEditTitle(e.target.value); }}
+                        placeholder="Title"
+                      />
+                      <input
+                        className="solve-input"
+                        value={editNotes}
+                        onChange={function (e) { setEditNotes(e.target.value); }}
+                        placeholder="Notes link (Slides or Doc)"
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="reveal-btn" onClick={saveEdit} disabled={editSaving}>
+                        {editSaving ? 'Saving...' : 'Save'}
+                      </button>
+                      <button className="reveal-btn" onClick={cancelEdit}>Cancel</button>
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <div className="cl-recording" key={r.id}>
                   <div>
                     <div className="cl-rec-title">L{r.level} - {r.title}</div>
                     <div className="cl-rec-meta">
                       {r.homeworks ? r.homeworks.theme : ''} - {r.recorded_on}
+                      {r.session_slot ? ' - auto (' + r.session_slot + ')' : ''}
+                      {r.notes_url ? ' - has notes' : ''}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <a className="reveal-btn" href={r.drive_url} target="_blank" rel="noreferrer">Open</a>
+                    {r.notes_url ? (
+                      <a className="reveal-btn" href={r.notes_url} target="_blank" rel="noreferrer">Notes</a>
+                    ) : null}
+                    <button className="reveal-btn" onClick={function () { startEdit(r); }}>Edit</button>
                     <button className="reveal-btn" onClick={function () { deleteRecording(r.id); }}>Delete</button>
                   </div>
                 </div>

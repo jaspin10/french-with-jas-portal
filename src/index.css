@@ -1297,3 +1297,8 @@ html[data-theme="dark"] .viewas-exit {
 
 .cl-rec-heading { margin-top: 16px; }
 .cl-rec-actions { display: flex; gap: 8px; }
+
+.rm-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.rm-header h2 { margin: 0; }
+.sync-rec-msg { margin-left: 8px; }
+.rm-edit-fields { display: flex; gap: 8px; flex: 1; }

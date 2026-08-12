@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 const FN_URL = 'https://jtzazvkshizmuhezuxwl.supabase.co/functions/v1/sync-recordings';
-const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
 
 export default function SyncRecordingsButton({ onDone }) {
   const [busy, setBusy] = useState(false);
@@ -13,11 +13,7 @@ export default function SyncRecordingsButton({ onDone }) {
     try {
       const res = await fetch(FN_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': ANON_KEY,
-          'Authorization': 'Bearer ' + ANON_KEY
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: '{}'
       });
       const data = await res.json();

@@ -4,6 +4,7 @@ import WeeklyProgressCard from '../components/WeeklyProgressCard'
 import MondayStatsCard from '../components/MondayStatsCard'
 import RapidFireProgressCard from '../components/RapidFireProgressCard'
 import LevelProgressCard from '../components/LevelProgressCard'
+import ChallengesDoneCard from '../components/ChallengesDoneCard'
 import { getUndismissedUnlock, dismissUnlock } from '../lib/levelProgress'
 
 function ymd(date) {
@@ -169,6 +170,7 @@ export default function Dashboard(props) {
           </div>
           <div className="stat-label">Homework time today (target 3h)</div>
         </div>
+        <ChallengesDoneCard profile={profile} />
       </div>
 
       <div style={{ marginBottom: 16 }}>

@@ -77,10 +77,22 @@ export default function Challenges(props) {
   function categoriesForType(type) {
     var vis = visibleChallenges();
     var cats = [];
+    var firstSeen = {};
     for (var i = 0; i < vis.length; i++) {
       if (vis[i].challenge_type !== type) continue;
-      if (cats.indexOf(vis[i].category) === -1) cats.push(vis[i].category);
+      var cat = vis[i].category;
+      if (cats.indexOf(cat) === -1) {
+        cats.push(cat);
+        firstSeen[cat] = vis[i].created_at;
+      } else if (vis[i].created_at < firstSeen[cat]) {
+        firstSeen[cat] = vis[i].created_at;
+      }
     }
+    cats.sort(function (a, b) {
+      if (firstSeen[a] < firstSeen[b]) return -1;
+      if (firstSeen[a] > firstSeen[b]) return 1;
+      return 0;
+    });
     return cats;
   }
 

@@ -15,6 +15,7 @@ import RecordingsManager from './pages/RecordingsManager'
 import MyResults from './pages/MyResults'
 import LiveManager from './pages/LiveManager'
 import LivePage from './pages/LivePage'
+import Challenges from './pages/Challenges'
 import { ViewAsProvider, useViewAs } from './lib/viewAs'
 
 function Placeholder(props) {
@@ -80,6 +81,7 @@ function AppRoutes(props) {
               <Route path="/results" element={<MyResults profile={effectiveProfile} />} />
               <Route path="/class" element={<ClassPage profile={effectiveProfile} />} />
               <Route path="/live" element={<LivePage profile={effectiveProfile} />} />
+              <Route path="/challenges" element={<Challenges profile={effectiveProfile} />} />
             </>
           )}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -208,7 +208,7 @@ export default function ChallengeRapidFire(props) {
       var base64 = await blobToBase64(audioBlob);
       var sentences = [];
       for (var i = 0; i < items.length; i++) {
-        sentences.push({ en: items[i].prompt, fr: items[i].correction });
+        sentences.push(items[i].correction);
       }
 
       var res = await fetch('/api/transcribe', {
@@ -217,7 +217,7 @@ export default function ChallengeRapidFire(props) {
         body: JSON.stringify({
           mode: 'list',
           items: sentences,
-          audio: base64,
+          audio_base64: base64,
           mime_type: formatRef.current.mime
         })
       });
@@ -232,6 +232,16 @@ export default function ChallengeRapidFire(props) {
     }
 
     var passed = result.score >= PASS_SCORE;
+
+    var wrongList = [];
+    var resultsArr = result.results || [];
+    for (var j = 0; j < resultsArr.length; j++) {
+      if (resultsArr[j] && resultsArr[j].correct === false) {
+        var label = 'Sentence ' + resultsArr[j].n;
+        if (resultsArr[j].issue) label = label + ': ' + resultsArr[j].issue;
+        wrongList.push(label);
+      }
+    }
 
     var insertRes = await supabase.from('challenge_attempts').insert({
       student_id: profile.id,
@@ -262,12 +272,12 @@ export default function ChallengeRapidFire(props) {
         transcript: result.transcript || null,
         score: result.score,
         max_score: MAX_SCORE,
-        mistakes: result.mistakes || [],
+        mistakes: wrongList,
         ai_note: result.note || null
       }, { onConflict: 'student_id,challenge_id' });
     }
 
-    setLastResult({ passed: passed, score: result.score, note: result.note || '', transcript: result.transcript || '', mistakes: result.mistakes || [] });
+    setLastResult({ passed: passed, score: result.score, note: result.note || '', transcript: result.transcript || '', mistakes: wrongList });
     deleteRecordingKeepResult();
     setChecking(false);
     await loadAll();
@@ -366,7 +376,7 @@ export default function ChallengeRapidFire(props) {
               {lastResult.mistakes && lastResult.mistakes.length > 0 ? (
                 <div className="ch-rf-mistakes">
                   {lastResult.mistakes.map(function (m, idx) {
-                    return <span key={idx} className="ch-rf-mistake-pill">{typeof m === 'string' ? m : JSON.stringify(m)}</span>;
+                    return <span key={idx} className="ch-rf-mistake-pill">{m}</span>;
                   })}
                 </div>
               ) : null}

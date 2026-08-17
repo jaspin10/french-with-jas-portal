@@ -62,6 +62,11 @@ export function isChallengeUnlocked(challenge, weaknessTags) {
   return false;
 }
 
+function isFreeOrder(challenge) {
+  var extra = challenge.extra || {};
+  return extra.free_order === true;
+}
+
 export function buildExerciseStates(challengesInGroup, completedIds) {
   var sorted = challengesInGroup.slice().sort(function (a, b) {
     return a.position - b.position;
@@ -72,12 +77,13 @@ export function buildExerciseStates(challengesInGroup, completedIds) {
   for (var i = 0; i < sorted.length; i++) {
     var c = sorted[i];
     var done = completedIds.indexOf(c.id) !== -1;
+    var free = isFreeOrder(c);
     var state;
     if (done) state = 'completed';
-    else if (previousDone) state = 'open';
+    else if (free || previousDone) state = 'open';
     else state = 'locked';
     states[c.id] = state;
-    previousDone = done;
+    previousDone = done || free;
   }
   return states;
 }

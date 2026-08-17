@@ -16,8 +16,7 @@ function formatSeconds(s) {
   return m + ':' + (r < 10 ? '0' : '') + r;
 }
 
-var PASS_SCORE = 14;
-var MAX_SCORE = 16;
+var DEFAULT_PASS_RATIO = 0.875;
 
 export default function ChallengeRapidFire(props) {
   var challenge = props.challenge;
@@ -43,6 +42,11 @@ export default function ChallengeRapidFire(props) {
   var chunksRef = useRef([]);
   var startedAtRef = useRef(null);
   var formatRef = useRef(pickAudioFormat());
+
+  var chExtra = challenge.extra || {};
+  var passRatio = chExtra.pass_ratio ? Number(chExtra.pass_ratio) : DEFAULT_PASS_RATIO;
+  var maxScore = items.length;
+  var passScore = maxScore > 0 ? Math.ceil(maxScore * passRatio) : 0;
 
   useEffect(function () {
     loadAll();
@@ -231,7 +235,7 @@ export default function ChallengeRapidFire(props) {
       return;
     }
 
-    var passed = result.score >= PASS_SCORE;
+    var passed = result.score >= passScore;
 
     var wrongList = [];
     var resultsArr = result.results || [];
@@ -250,7 +254,7 @@ export default function ChallengeRapidFire(props) {
       duration_seconds: duration,
       accepted: passed,
       score: result.score,
-      max_score: MAX_SCORE
+      max_score: maxScore
     });
 
     if (insertRes.error) {
@@ -271,13 +275,13 @@ export default function ChallengeRapidFire(props) {
         challenge_id: challenge.id,
         transcript: result.transcript || null,
         score: result.score,
-        max_score: MAX_SCORE,
+        max_score: maxScore,
         mistakes: wrongList,
         ai_note: result.note || null
       }, { onConflict: 'student_id,challenge_id' });
     }
 
-    setLastResult({ passed: passed, score: result.score, note: result.note || '', transcript: result.transcript || '', mistakes: wrongList });
+    setLastResult({ passed: passed, score: result.score, max: maxScore, note: result.note || '', transcript: result.transcript || '', mistakes: wrongList });
     deleteRecordingKeepResult();
     setChecking(false);
     await loadAll();
@@ -304,7 +308,7 @@ export default function ChallengeRapidFire(props) {
         <span className={'ch-rf-pill' + (completed ? ' done' : '')}>
           {completed ? 'Completed' : 'Not completed'}
         </span>
-        <span className="ch-rf-pill">Pass: {PASS_SCORE}/{MAX_SCORE}</span>
+        <span className="ch-rf-pill">Pass: {passScore}/{maxScore}</span>
         {best !== null ? <span className="ch-rf-pill">Your best: {formatSeconds(best)}</span> : null}
       </div>
 
@@ -370,7 +374,7 @@ export default function ChallengeRapidFire(props) {
           {lastResult ? (
             <div className={'ch-rf-result' + (lastResult.passed ? ' pass' : ' fail')}>
               <div className="ch-rf-result-score">
-                {lastResult.score}/{MAX_SCORE} - {lastResult.passed ? 'Passed!' : 'Not passed. Try again!'}
+                {lastResult.score}/{lastResult.max} - {lastResult.passed ? 'Passed!' : 'Not passed. Try again!'}
               </div>
               {lastResult.note ? <p className="ch-rf-note">{lastResult.note}</p> : null}
               {lastResult.mistakes && lastResult.mistakes.length > 0 ? (
